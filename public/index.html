@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- 안드로이드 크롬: 키보드가 뜨면 화면 높이를 줄여 채팅 입력칸이 보이게 (Safari는 이 값을 몰라 오류를 남기므로 안드로이드에서만) -->
+<script>try { if (/Android/i.test(navigator.userAgent)) { var vm = document.querySelector('meta[name=viewport]'); vm.content += ', interactive-widget=resizes-content'; } } catch (e) {}</script>
+<meta name="theme-color" content="#16213e">
+<title>루미큐브 온라인</title>
+<link rel="icon" href="icon.svg">
+<!-- 제목용 명조 글꼴: 인터넷이 없으면(교회 와이파이 등) 화면을 막지 않고 시스템 명조로 대신 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="flow.css">
+<link rel="stylesheet" href="polish.css">
+</head>
+<body>
+<!-- 조커 문양 (그림 문자 대신 SVG: 기기마다 똑같이 보이게). 사람마다 고름, 기본은 ✦ 별 -->
+<svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="jkGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1d27f"/><stop offset="1" stop-color="#c9972e"/></linearGradient>
+    <radialGradient id="jkHalo"><stop offset="0" stop-color="#ffe7a0" stop-opacity=".95"/><stop offset=".55" stop-color="#f6d77e" stop-opacity=".45"/><stop offset="1" stop-color="#f6d77e" stop-opacity="0"/></radialGradient>
+    <linearGradient id="jkStar" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a45b5"/><stop offset="1" stop-color="#4f1f6d"/></linearGradient>
+  </defs>
+  <symbol id="jk-star" viewBox="0 0 24 24">
+    <circle cx="12" cy="11.6" r="9.6" fill="url(#jkHalo)"/>
+    <path d="M12 1.2Q13.25 10.1 20.6 11.6Q13.25 13.1 12 23.2Q10.75 13.1 3.4 11.6Q10.75 10.1 12 1.2Z" fill="url(#jkStar)" stroke="#3b1552" stroke-width=".5" stroke-linejoin="round"/>
+    <path d="M12 4.6Q12.7 10.7 17 11.6" fill="none" stroke="#e9d3f5" stroke-width=".7" stroke-linecap="round" opacity=".75"/>
+  </symbol>
+  <symbol id="jk-cross" viewBox="0 0 24 24">
+    <circle cx="12" cy="8.6" r="10" fill="url(#jkHalo)"/>
+    <path d="M10.2 1.4H13.8V6.7H19.2V10.3H13.8V22.8H10.2V10.3H4.8V6.7H10.2Z" fill="url(#jkGold)" stroke="#5a3a08" stroke-width=".6" stroke-linejoin="round"/>
+    <path d="M10.9 2.2V21.9M5.6 7.4H18.4" fill="none" stroke="#fff3c6" stroke-width=".55" opacity=".7"/>
+  </symbol>
+  <symbol id="jk-dove" viewBox="0 0 24 24">
+    <path d="M9.3 12.1C8.6 7.9 9.8 4.2 12.9 1.6C12.6 4.9 13.6 8.2 15.9 12.1Z" fill="#22355f"/>
+    <path d="M2.2 11.3L4.4 10.6C4.7 8.9 6.1 8 7.5 8.3C9 8.6 9.6 10 9.4 11.4C11.9 12.5 14.9 12.6 17.4 12.1L22.4 10.2L20.3 13.6L22.8 15.6C19.8 15.9 17.9 15.6 16.3 16.1C13.6 18.1 9.3 18 7.3 15.6C6 14.1 5.3 12.8 4.6 11.9Z" fill="#16213e"/>
+    <path d="M10.6 12.6C12.7 8.2 16 4.4 21.1 2.9C19.7 6.4 19.2 9.8 18.2 13Z" fill="#6e1f30"/>
+    <circle cx="6.6" cy="10.1" r=".75" fill="#fbf5e7"/>
+  </symbol>
+</svg>
+
+<section id="home" class="screen">
+  <aside class="welcome-art" aria-labelledby="welcomeTitle">
+    <span class="edition">THE FELLOWSHIP TABLE · 01</span>
+    <img src="window.svg" alt="" class="welcome-window">
+    <h2 id="welcomeTitle" data-i18n="polish.title">한 수를 놓고,<br>마음을 나누다.</h2>
+    <p data-i18n="polish.sub">작은 타일로 이어지는 좋은 시간.<br>같은 테이블에서, 어디에 있든.</p>
+    <div class="display-tiles" aria-hidden="true"><span class="tile c0">7</span><span class="tile c1">7</span><span class="tile c2">7</span></div>
+    <div class="welcome-foot"><span data-i18n="polish.players">2–4명 · 친구 또는 컴퓨터</span><span data-i18n="polish.devices">PC & 모바일</span></div>
+  </aside>
+  <div class="card center arch">
+    <div class="logo" aria-hidden="true"><span class="tile c0">1</span><span class="tile c1">2</span><span class="tile c2">3</span><span class="tile joker"><svg class="jkg"><use href="#jk-star" xlink:href="#jk-star"/></svg></span></div>
+    <h1 data-i18n="home.title">루미큐브 온라인</h1>
+    <p class="muted" data-i18n="home.sub">목장·청년부 식구들과 방 코드로 함께하는 타일 게임 (2~4명)</p>
+    <figure class="verse">
+      <blockquote data-i18n-html="verse.html">보라 형제가 연합하여 동거함이<br>어찌 그리 선하고 아름다운고</blockquote>
+      <figcaption data-i18n="verse.ref">시편 133:1</figcaption>
+    </figure>
+    <button id="btnRejoin" class="primary big hidden"></button>
+    <label><span data-i18n="home.name">내 이름</span> <input id="name" maxlength="12" placeholder="이름" data-i18n-ph="home.namePh" autocomplete="nickname"></label>
+    <button id="btnCreate" class="primary big" data-i18n="home.create">새 방 만들기</button>
+    <button id="btnPractice" class="big practice"><span data-i18n="home.practice">🕊 혼자 연습하기</span> <small data-i18n="home.practiceSub">쉬운 컴퓨터와 · 시간 제한 없음</small></button>
+    <div class="or" data-i18n="home.or">또는</div>
+    <div class="row">
+      <input id="code" maxlength="4" placeholder="방 코드" data-i18n-ph="home.codePh" data-i18n-aria="home.codePh" autocapitalize="characters" autocomplete="off">
+      <button id="btnJoin" class="big" data-i18n="home.join">참가</button>
+    </div>
+    <details class="rules" id="homeRules">
+      <summary data-i18n="rules.title">📖 규칙 한눈에</summary>
+    </details>
+    <div class="lang-switch" data-i18n-aria="lang.label" aria-label="언어"></div>
+  </div>
+</section>
+
+<section id="lobby" class="screen hidden">
+  <div class="card center arch">
+    <!-- 넓은 화면·폰 가로에선 두 칸(왼쪽 초대 / 오른쪽 참가자·시작), 좁은 화면에선 칸 없이 한 줄 (flow.css .lobby-col) -->
+    <div class="lobby-col lobby-invite">
+      <p class="muted" data-i18n="lobby.code">방 코드</p>
+      <div id="lobbyCode" class="bigcode"></div>
+      <div class="invite">
+        <button id="lobbyQr" class="qr" type="button" aria-label="QR 코드 크게 보기 (TV로 보기)" data-i18n-aria="lobby.qrAria"></button>
+        <p class="qr-cap" data-i18n="lobby.qrCap">폰 카메라로 찍으면 바로 들어와요</p>
+        <p id="lobbyUrl" class="qr-url"></p>
+        <button id="btnNextUrl" class="linkish hidden" type="button" data-i18n="lobby.nextUrl">다른 주소</button>
+      </div>
+      <button id="btnShare" data-i18n="lobby.share">초대 링크 복사</button>
+    </div>
+    <div class="lobby-col lobby-people">
+      <div class="connection-note hidden" data-connection role="status"></div>
+      <h3><span data-i18n="lobby.players">참가자</span> <span id="lobbyCount"></span></h3>
+      <ul id="lobbyPlayers" class="plist"></ul>
+      <div class="row botrow">
+        <button id="btnAddEasy" data-i18n="lobby.addEasy">🤖 쉬움 봇 추가</button>
+        <button id="btnAddHard" data-i18n="lobby.addHard">🤖 어려움 봇 추가</button>
+      </div>
+      <label id="timerWrap"><span data-i18n="lobby.timer">턴 제한 시간</span>
+        <select id="timer">
+          <option value="0" data-i18n="timer.0">없음</option><option value="60" data-i18n="timer.60">60초</option><option value="90" data-i18n="timer.90">90초</option>
+          <option value="120" data-i18n="timer.120">2분</option><option value="180" data-i18n="timer.180">3분</option>
+        </select>
+      </label>
+      <button id="btnStart" class="primary big" data-i18n="lobby.start">게임 시작</button>
+      <p id="lobbyHint" class="muted"></p>
+    </div>
+    <div id="lobbyChatSlot" class="chat-slot"></div>
+    <button id="btnLeave" class="ghost" data-i18n="lobby.leave">방 나가기</button>
+    <div class="lang-switch" data-i18n-aria="lang.label" aria-label="언어"></div>
+  </div>
+</section>
+
+<section id="game" class="screen hidden">
+  <header class="topbar">
+    <div class="players" id="players"></div>
+    <div class="meta"><span id="poolCount"></span><span id="clock"></span><button id="btnChat" class="ghost small" title="채팅" aria-label="채팅" data-i18n-title="game.chat" data-i18n-aria="game.chat">💬<span id="chatBadge" class="badge hidden"></span></button><button id="btnRules" class="ghost small" title="규칙 한눈에" aria-label="규칙 한눈에" data-i18n-title="game.rules" data-i18n-aria="game.rules">?</button><button id="btnMenu" class="ghost small" title="메뉴" aria-label="메뉴" data-i18n-title="game.menu" data-i18n-aria="game.menu">⋯</button></div>
+  </header>
+  <div class="connection-note hidden" data-connection role="status"></div>
+  <div id="status" class="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="coach" class="coach hidden" role="status"></div>
+  <main id="table" class="table"></main>
+  <div id="log" class="log"></div>
+  <footer class="dock">
+    <div class="controls">
+      <button id="btnUndo" class="ic" title="한 수 되돌리기 (Ctrl+Z)" aria-label="한 수 되돌리기" data-i18n-title="game.undoTitle" data-i18n-aria="game.undoAria"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4.5 3.5 9 8 13.5M4 9h8.5a4.5 4.5 0 0 1 0 9H10"/></svg><span data-i18n="game.undo">한 수</span></button>
+      <button id="btnReset" class="ic hidden" title="이번 턴 처음 상태로" aria-label="이번 턴 처음 상태로" data-i18n-title="game.resetTitle" data-i18n-aria="game.resetTitle"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.2 7.2A6.5 6.5 0 1 1 3.5 11M3.6 2.8v4.6h4.6"/></svg><span class="lb" data-i18n="game.reset">처음</span></button>
+      <button id="btnSortNum" title="숫자순 정렬" aria-label="숫자순 정렬" data-i18n-title="game.sortNum" data-i18n-aria="game.sortNum">123</button>
+      <button id="btnSortColor" title="색깔순 정렬" aria-label="색깔순 정렬" data-i18n-title="game.sortColor" data-i18n-aria="game.sortColor">🎨</button>
+      <span class="spacer"></span>
+      <button id="btnDraw" data-i18n="game.draw">뽑기</button>
+      <button id="btnDone" class="primary"><span data-i18n="game.done">완료</span><small class="why hidden"></small></button>
+    </div>
+    <div class="rack-heading">
+      <span id="rackSummary"></span>
+      <span id="rackGuide"></span>
+      <div id="selectionTools" class="selection-tools hidden">
+        <button id="btnPlaceSelected" type="button"></button>
+        <button id="btnReturnSelected" type="button" class="hidden"></button>
+        <button id="btnClearSelected" type="button"></button>
+      </div>
+    </div>
+    <div id="rack" class="rack" aria-label="내 타일" data-i18n-aria="ux.rack"></div>
+  </footer>
+</section>
+
+<!-- 결과: ① 제목·점수 → ② 오늘의 시상식(한 사람에 하나씩) → ③ 말씀·오늘 판 기록 -->
+<div id="overlay" class="overlay hidden">
+  <div id="ovCard" class="card center glass ceremony">
+    <h2 id="ovTitle"></h2>
+    <table id="ovTable" class="results"></table>
+    <section id="ovAwards" class="awards hidden" aria-labelledby="ovAwardsH">
+      <h3 id="ovAwardsH" class="awards-h" data-i18n="ov.awards">오늘의 시상식</h3>
+      <ol id="ovPanes" class="panes"></ol>
+    </section>
+    <section id="ovStory" class="story">
+      <figure class="verse small"><blockquote data-i18n-html="verse.html">보라 형제가 연합하여 동거함이<br>어찌 그리 선하고 아름다운고</blockquote><figcaption data-i18n="verse.ref">시편 133:1</figcaption></figure>
+      <div id="ovHistory" class="history"></div>
+    </section>
+    <div class="ov-actions">
+      <button id="btnAgain" class="primary big" data-i18n="ov.again">한 판 더</button>
+      <p id="ovHint" class="muted"></p>
+      <div class="ov-row">
+        <button id="btnShareResult" type="button" data-i18n="ov.share">📋 결과 공유</button>
+        <button id="btnChat2"><span data-i18n="ov.chat">💬 이야기 나누기</span> <span id="chatBadge2" class="badge hidden"></span></button>
+      </div>
+    </div>
+    <button id="btnLeave2" class="ghost" data-i18n="lobby.leave">방 나가기</button>
+  </div>
+</div>
+
+<div id="menu" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="prefsH">
+  <div class="card center glass menu-card">
+    <h3><span data-i18n="menu.code">방 코드</span> <span id="menuCode"></span></h3>
+    <button id="btnRules2" type="button" data-i18n="rules.title">📖 규칙 한눈에</button>
+    <button id="btnShare2" data-i18n="lobby.share">초대 링크 복사</button>
+    <button id="btnSound">소리 켜짐</button>
+    <section class="prefs" aria-labelledby="prefsH">
+      <h4 id="prefsH" data-i18n="menu.prefs">내 화면 설정</h4>
+      <div class="lang-switch" data-i18n-aria="lang.label" aria-label="언어"></div>
+      <button type="button" class="toggle" role="switch" aria-checked="true" data-pref="marks"><span class="t-l"><span data-i18n="pref.marks">색 구분 기호</span><small data-i18n="pref.marksSub">네 가지 색을 모양으로도 알려 줘요</small></span><span class="sw" aria-hidden="true"></span></button>
+      <button type="button" class="toggle" role="switch" aria-checked="false" data-pref="big"><span class="t-l"><span data-i18n="pref.big">큰 타일</span><small data-i18n="pref.bigSub">타일과 글씨를 크게</small></span><span class="sw" aria-hidden="true"></span></button>
+      <button type="button" class="toggle" role="switch" aria-checked="false" data-pref="calm"><span class="t-l"><span data-i18n="pref.calm">효과 줄이기</span><small data-i18n="pref.calmSub">움직임·반짝임을 줄여요 (색과 소리는 그대로)</small></span><span class="sw" aria-hidden="true"></span></button>
+      <p id="jkCap" class="jk-cap"><span data-i18n="joker.cap">조커 모양</span> <small data-i18n="joker.capSub">(내 화면에만 보여요)</small></p>
+      <div id="jokerPick" class="jk-pick" role="radiogroup" aria-labelledby="jkCap"></div>
+    </section>
+    <button id="btnLeave3" class="danger" data-i18n="menu.leaveGame">게임에서 나가기</button>
+    <button id="btnMenuClose" class="ghost" data-i18n="menu.close">닫기</button>
+  </div>
+</div>
+
+<!-- 채팅: 대기실에선 카드 안에, 게임 중엔 아래에서 올라오는 창으로 (같은 요소를 옮겨 씀) -->
+<section id="chatPanel" class="chat hidden" aria-label="채팅" data-i18n-aria="chat.aria">
+  <header class="chat-head"><b data-i18n="chat.title">💬 이야기 나누기</b><button id="btnChatClose" class="ghost small" title="닫기" aria-label="채팅 닫기" data-i18n-title="chat.close" data-i18n-aria="chat.closeAria">✕</button></header>
+  <ol id="chatList" class="chat-list" aria-live="polite"></ol>
+  <div id="chatQuick" class="chat-quick"></div>
+  <form id="chatForm" class="chat-form" autocomplete="off">
+    <input id="chatInput" maxlength="100" placeholder="메시지 입력…" enterkeyhint="send" aria-label="메시지" data-i18n-ph="chat.ph" data-i18n-aria="chat.inputAria">
+    <button id="chatSend" class="primary" type="submit" data-i18n="chat.send">보내기</button>
+  </form>
+</section>
+<div id="chatBubble" class="chat-bubble hidden" role="status"></div>
+
+<!-- TV로 보기: 목장 모임에서 프로젝터·TV에 띄워 두기 (누르면 닫힘) -->
+<div id="tv" class="tv hidden" role="dialog" aria-modal="true" aria-label="TV로 보기 — 누르면 닫혀요" data-i18n-aria="tv.aria" tabindex="-1">
+  <p class="tv-k" data-i18n="tv.code">방 코드</p>
+  <div id="tvCode" class="tv-code"></div>
+  <div id="tvQr" class="tv-qr"></div>
+  <p id="tvUrl" class="tv-url"></p>
+  <p class="tv-hint" data-i18n="tv.hint">폰 카메라로 찍거나, 주소를 열고 방 코드를 넣으세요 · 화면을 누르면 닫혀요</p>
+</div>
+
+<!-- 규칙 한눈에 (진짜 타일로) -->
+<div id="rulesSheet" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="rulesH">
+  <div class="card rules-sheet">
+    <h3 id="rulesH" tabindex="-1" data-i18n="rules.title">📖 규칙 한눈에</h3>
+    <div id="rulesBody"></div>
+    <button id="btnRulesClose" class="primary" data-i18n="rules.close">알겠어요</button>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="rules.js"></script>
+<script src="qr.js"></script>
+<script src="sfx.js"></script>
+<script src="i18n.js"></script>
+<script src="tile-motion.js"></script>
+<script src="app.js"></script>
+<script src="flow.js"></script>
+<script src="ux.js"></script>
+</body>
+</html>

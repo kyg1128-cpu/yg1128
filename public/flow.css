@@ -1,0 +1,352 @@
+/* 루미큐브 — 입장·설정·결과·안내 (style.css 다음에 읽힘). 색·글꼴은 style.css의 :root 값을 그대로 씀 */
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
+
+/* ---------- 조커 문양 (SVG) ---------- */
+.tile.joker, body[data-joker] .tile.joker { font-size: var(--tf); font-weight: 400; text-shadow: none; }
+.tile.joker .jkg { display: block; width: calc(var(--th) * .62); height: calc(var(--th) * .62); flex: none; overflow: visible; }
+.tile.joker[data-as] .jkg { transform: translate(-2px, -3px) scale(.86); }   /* 아래 오른쪽의 숫자(대신하는 수)와 겹치지 않게 */
+.results .mini .tile.joker .jkg { width: 12px; height: 12px; transform: none; }
+svg.jkg.inline { display: inline-block; width: 1.25em; height: 1.25em; vertical-align: -.28em; }
+
+/* ---------- 색 구분 기호 (body.marks): 왼쪽 위에 CSS로 그린 작은 모양 — 빨강 ● 파랑 ▲ 주황 ■ 검정 ◆ ---------- */
+body.marks .tile.c0::before, body.marks .tile.c1::before, body.marks .tile.c2::before, body.marks .tile.c3::before {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 7px; height: 7px; background: currentColor; pointer-events: none;
+}
+body.marks .tile.c0::before { border-radius: 50%; }
+body.marks .tile.c1::before { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+body.marks .tile.c2::before { width: 6px; height: 6px; top: 3.5px; left: 3.5px; }
+body.marks .tile.c3::before { width: 8px; height: 8px; top: 2.5px; left: 2.5px; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+body.marks.big .tile.c0::before, body.marks.big .tile.c1::before { width: 8px; height: 8px; }
+body.marks .results .mini .tile::before { content: none; }
+
+/* ---------- 큰 타일 (body.big): 타일 약 1.25배, 글씨도 조금 크게 ---------- */
+body.big { --tw: 45px; --th: 62px; --tf: 27px; }
+@media (min-width: 700px) { body.big { --tw: 52px; --th: 72px; --tf: 31px; } }
+@media (max-width: 380px) { body.big { --tw: 38px; --th: 54px; --tf: 23px; } }
+body.big .status, body.big .log { font-size: 16px; }
+body.big .pchip { font-size: 15px; }
+body.big .toast { font-size: 16px; }
+
+/* ---------- 효과 줄이기 (body.calm): 움직임 끄기 (색과 소리는 그대로) ---------- */
+body.calm .tile.newdraw, body.calm .chat.sheet, body.calm .chat-bubble,
+body.calm .pane, body.calm .pane.lit, body.calm .tv, body.calm .coach { animation: none; }
+body.calm .pane, body.calm .story, body.calm .tile { transition: none; }
+
+/* ---------- 처음 화면 ---------- */
+button.practice {
+  background: #fffaf0; color: var(--wine); border: 1px solid #dcc58e; box-shadow: inset 0 -2px 0 rgba(90, 60, 10, .1);
+  display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.25;
+}
+button.practice small { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+#btnRejoin { word-break: keep-all; text-wrap: balance; }
+.rules[open] summary { margin-bottom: 4px; }
+
+/* ---------- 규칙 한눈에 (진짜 타일로) ---------- */
+.rulecard { display: flex; flex-direction: column; gap: 10px; text-align: left; color: #3d3430; font-size: 14px; line-height: 1.5; }
+.rulecard .goal { margin: 0; font-family: var(--serif); color: var(--wine); font-size: 15px; word-break: keep-all; }
+.rulecard .rule { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; border-radius: 10px; background: #f3e8cf; border: 1px solid #e6d6b0; }
+.rulecard .rule-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; word-break: keep-all; }
+.rulecard .rule-h b { color: var(--navy); font-size: 15px; }
+.rulecard .rule-h span { color: var(--muted); font-size: 13px; }
+.rulecard .rule-tiles { display: flex; gap: 3px; --tw: 30px; --th: 42px; --tf: 18px; }
+body.big .rulecard .rule-tiles { --tw: 36px; --th: 50px; --tf: 21px; }
+.rulecard .rule-tiles .tile { cursor: default; }
+.rulecard p { margin: 0; word-break: keep-all; }
+.rulecard .note { padding-left: 14px; position: relative; }
+.rulecard .note::before { content: ''; position: absolute; left: 3px; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
+.rulecard .note b { color: var(--navy); }
+#rulesSheet .card { max-width: 420px; text-align: left; }
+#rulesSheet h3 { text-align: center; }
+
+/* ---------- 대기실 초대: QR + 읽을 수 있는 주소 ---------- */
+.invite { display: flex; flex-direction: column; align-items: center; gap: 3px; margin: -2px 0 2px; }
+button.qr {
+  width: 200px; height: 200px; padding: 6px; border-radius: 14px; background: #fffaf0; cursor: zoom-in;
+  border: 1px solid #dcc58e; box-shadow: 0 2px 8px rgba(60, 40, 10, .14), inset 0 0 0 4px #fffaf0;
+}
+button.qr svg { display: block; width: 100%; height: 100%; }
+button.qr:empty::after { content: '…'; color: var(--muted); }
+.qr-cap { margin: 4px 0 0; font-size: 13.5px; color: var(--wine); font-weight: 600; }
+.qr-url { margin: 0; font: 600 13px/1.35 ui-monospace, "Cascadia Mono", Consolas, monospace; color: var(--navy); overflow-wrap: anywhere; }
+button.linkish {
+  background: none; box-shadow: none; padding: 4px 10px; min-height: 40px; font-size: 13px; font-weight: 600;
+  color: var(--gold-deep); text-decoration: underline; text-underline-offset: 3px;
+}
+
+/* ---------- TV로 보기 ---------- */
+.tv {
+  position: fixed; inset: 0; z-index: 40; cursor: zoom-out; overflow: auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; justify-content: safe center; gap: 1.4vh; padding: 3vh 4vw;
+  color: var(--cream); text-align: center;
+  background:
+    radial-gradient(ellipse 55% 32% at 12% 6%, rgba(168, 40, 62, .40), transparent 70%),
+    radial-gradient(ellipse 50% 32% at 90% 10%, rgba(43, 88, 168, .48), transparent 70%),
+    radial-gradient(ellipse 50% 28% at 10% 92%, rgba(122, 70, 168, .30), transparent 70%),
+    linear-gradient(180deg, #19264c 0%, #0d1429 100%);
+  animation: tv-in .2s ease-out;
+}
+@keyframes tv-in { from { opacity: 0; } }
+.tv:focus { outline: none; }
+.tv-k { margin: 0; font-size: clamp(16px, 3vh, 34px); color: rgba(246, 239, 220, .8); letter-spacing: .2em; }
+.tv-code {
+  font-family: var(--serif); font-weight: 700; line-height: 1; color: var(--gold-hi);
+  font-size: clamp(56px, min(17vw, 20vh), 260px); letter-spacing: .14em; padding-left: .14em;
+  text-shadow: 0 0 30px rgba(241, 210, 127, .35);
+}
+.tv-qr { width: min(46vh, 78vw); aspect-ratio: 1; padding: 1.2vh; border-radius: 18px; background: #fffaf0; box-shadow: 0 10px 40px rgba(0, 0, 0, .5); }
+.tv-qr svg { display: block; width: 100%; height: 100%; }
+.tv-url { margin: 0; font: 700 clamp(18px, 3.4vh, 44px)/1.3 ui-monospace, "Cascadia Mono", Consolas, monospace; overflow-wrap: anywhere; }
+.tv-hint { margin: 0; font-size: clamp(13px, 2vh, 22px); color: rgba(246, 239, 220, .72); word-break: keep-all; text-wrap: balance; }
+@media (min-aspect-ratio: 4/3) and (min-height: 420px) {
+  /* 노트북·프로젝터(1280×800 등)에서도 QR 오른쪽 여백까지 화면 안에 (넓은 글자 'WMWM'도) */
+  .tv { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto auto auto; column-gap: 5vw; align-content: center; align-content: safe center; justify-content: center; justify-content: safe center; }
+  .tv-qr { grid-column: 2; grid-row: 1 / 5; width: min(66vh, 40vw); }
+  .tv-k, .tv-code, .tv-url, .tv-hint { grid-column: 1; }
+  .tv-code { font-size: clamp(56px, min(8.5vw, 20vh), 300px); }
+  .tv-hint { max-width: 36vw; justify-self: center; }
+}
+
+/* ---------- 결과·메뉴·규칙 카드: 작은 화면에서도 카드 안에서 위아래로 스크롤 ---------- */
+/* 노치·홈 막대가 있는 아이폰(viewport-fit=cover)에서도 카드가 가려지지 않게 (다른 기기는 env()가 0 → 12px 그대로) */
+.overlay {
+  --ov-t: max(12px, env(safe-area-inset-top, 0px)); --ov-b: max(12px, env(safe-area-inset-bottom, 0px));
+  padding: var(--ov-t) max(12px, env(safe-area-inset-right, 0px)) var(--ov-b) max(12px, env(safe-area-inset-left, 0px));
+}
+#menu, #rulesSheet { z-index: 16; }   /* 채팅 말풍선(14)이 메뉴·규칙을 가리지 않게 */
+#overlay:not(.hidden) ~ #chatBubble { display: none; }   /* 결과 창 위로 말풍선이 점수표를 가리지 않게 (새 글은 '이야기 나누기' 배지로) */
+#overlay .card, #menu .card, #rulesSheet .card {
+  max-height: calc(100vh - 24px); max-height: calc(100dvh - var(--ov-t, 12px) - var(--ov-b, 12px)); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+}
+#overlay .card { --cp: 22px; padding-left: var(--cp); padding-right: var(--cp); padding-bottom: 0; scroll-padding-bottom: 130px; }
+#overlay .card::after { content: ''; flex: none; height: max(0px, calc(var(--cp) - 10px)); }   /* 아래 여백 (스크롤 끝까지 포함되도록 요소로) */
+@media (max-width: 380px) {
+  #overlay .card { --cp: 14px; }
+  #menu .card, #rulesSheet .card { padding-left: 14px; padding-right: 14px; }
+}
+
+/* ---------- 오늘의 시상식 ---------- */
+.ceremony { max-width: 420px; gap: 10px; }
+.ceremony .results td { padding: 6px 4px; }
+.ceremony .results tr.me td:first-child .nm { font-weight: 700; color: var(--wine); }
+.ceremony .results .nm { overflow-wrap: anywhere; }
+.ceremony .results td.tot { color: var(--muted); font-weight: 600; font-size: 13px; white-space: nowrap; }
+.ceremony .results td.num { font-variant-numeric: tabular-nums; }
+.awards-h { font-size: 17px; margin: 4px 0 0; display: flex; align-items: center; gap: 10px; }
+.awards-h::before, .awards-h::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--gold)); }
+.awards-h::after { transform: scaleX(-1); }
+.panes { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.panes li:last-child:nth-child(odd) { grid-column: 1 / -1; justify-self: center; width: calc(50% - 4px); }
+.pane {
+  --g: #2b58a8; --g2: #16336b;
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 10px 6px 9px;
+  border-radius: 40px 40px 10px 10px / 26px 26px 10px 10px;   /* 위가 둥근 창문 */
+  background: linear-gradient(180deg, var(--g2), #141024); color: rgba(246, 239, 220, .0);
+  border: 2px solid #231b30; box-shadow: inset 0 0 0 1px rgba(201, 162, 74, .35);
+  filter: saturate(.5) brightness(.55); min-height: 92px; text-align: center; word-break: keep-all;
+  transition: filter .45s ease, background .45s ease, color .3s ease .1s, box-shadow .45s ease;
+}
+.pane.g0 { --g: #a8283e; --g2: #5c1424; }
+.pane.g1 { --g: #2b58a8; --g2: #16336b; }
+.pane.g2 { --g: #2e7a5a; --g2: #16432f; }
+.pane.g3 { --g: #6b3f8f; --g2: #3a1f52; }
+.pane.g4 { --g: #c9973a; --g2: #6d4e14; }
+.pane.lit {
+  filter: none; color: var(--cream);
+  background:
+    radial-gradient(ellipse 70% 38% at 50% 4%, rgba(255, 246, 214, .34), transparent 72%),   /* 빛은 위쪽(그림 뒤)에만 — 금빛 상 이름이 잘 읽히게 */
+    linear-gradient(180deg, var(--g), var(--g2));
+  box-shadow: inset 0 0 0 1px rgba(241, 210, 127, .55), 0 0 16px color-mix(in srgb, var(--g) 55%, transparent);
+  animation: pane-glint .7s ease-out;
+}
+@keyframes pane-glint { 0% { transform: scale(.96); } 60% { transform: scale(1.02); } 100% { transform: none; } }
+.pane.mine { border-color: var(--gold); box-shadow: inset 0 0 0 1px rgba(241, 210, 127, .55), 0 0 0 2px var(--gold-hi); }
+.pane.mine.lit { box-shadow: inset 0 0 0 1px rgba(241, 210, 127, .7), 0 0 0 2px var(--gold-hi), 0 0 18px rgba(241, 210, 127, .55); }
+.pane .pe { font-size: 26px; line-height: 1.15; opacity: 0; transition: opacity .3s ease .1s; }
+.pane.lit .pe { opacity: 1; }
+.pane .pt { font-family: var(--serif); font-size: 15px; color: inherit; }
+.pane.lit .pt { color: var(--gold-hi); text-shadow: 0 1px 2px rgba(0, 0, 0, .45); }
+.pane .pn { font-size: 13.5px; font-weight: 700; overflow-wrap: anywhere; }
+.pane .pd { font-size: 11.5px; line-height: 1.3; opacity: .92; }
+.story { display: flex; flex-direction: column; gap: 8px; transition: opacity .5s ease; }
+.story.later { opacity: 0; visibility: hidden; }
+.verse.small { padding-top: 8px; }
+.verse.small blockquote { font-size: 14px; line-height: 1.55; }
+.history h4 { margin: 0 0 4px; font-family: var(--serif); color: var(--wine); font-size: 15px; }
+.history .hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; }
+.history .hist li { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 8px; background: #f3e8cf; }
+.history .hist li.me { background: #f6e3b0; }
+.history .hn { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history .hs { color: var(--gold-deep); letter-spacing: 1px; }
+.history .hv { min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; color: var(--navy); }
+/* 한 판 더·공유·이야기는 카드 아래에 붙어 있어 시상식을 보는 중에도 바로 누를 수 있음 */
+.ov-actions {
+  position: sticky; bottom: 0; z-index: 2; display: flex; flex-direction: column; gap: 8px;
+  margin: 2px calc(-1 * var(--cp, 22px)) 0; padding: 10px var(--cp, 22px) 12px;
+  background: linear-gradient(rgba(251, 245, 231, 0), var(--parch) 10px);
+  /* 카드 안쪽 금선이 끊기지 않게 이어 그림 (아래에 붙어 있을 때는 아랫선까지) */
+  --frame: inset 5px 0 0 var(--parch), inset 6px 0 0 rgba(201, 162, 74, .6), inset -5px 0 0 var(--parch), inset -6px 0 0 rgba(201, 162, 74, .6);
+  box-shadow: var(--frame);
+}
+.ov-actions.stuck { border-radius: 0 0 17px 17px; box-shadow: inset 0 -5px 0 var(--parch), inset 0 -6px 0 rgba(201, 162, 74, .6), var(--frame); }
+.ov-actions::before { content: ''; position: absolute; left: var(--cp, 22px); right: var(--cp, 22px); top: 4px; height: 1px; background: linear-gradient(90deg, transparent, rgba(201, 162, 74, .6), transparent); }
+#btnLeave2 { align-self: center; min-width: 160px; margin-top: -4px; }
+.ov-actions .muted:empty { display: none; }
+.ov-row { display: flex; gap: 8px; }
+.ov-row button { flex: 1 1 0; min-width: 0; padding-left: 6px; padding-right: 6px; white-space: nowrap; }
+@media (max-width: 340px) { .ov-row { flex-direction: column; } }
+
+/* ---------- ⋯ 메뉴: 내 화면 설정 ---------- */
+.menu-card { max-width: 400px; }
+.prefs { display: flex; flex-direction: column; gap: 6px; padding: 10px 0 2px; border-top: 1px solid var(--line); text-align: left; }
+.prefs h4 { margin: 0 0 2px; font-family: var(--serif); color: var(--wine); font-size: 15px; text-align: center; }
+button.toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 48px; text-align: left;
+  background: #f3e8cf; border: 1px solid #e6d6b0; box-shadow: none; padding: 7px 10px 7px 12px;
+}
+button.toggle .t-l { display: flex; flex-direction: column; font-size: 15px; line-height: 1.25; }
+button.toggle .t-l small { font-size: 12px; font-weight: 500; color: var(--muted); word-break: keep-all; }
+button.toggle .sw { flex: none; position: relative; width: 44px; height: 26px; border-radius: 13px; background: #cdbf9f; transition: background .15s; }
+button.toggle .sw::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fffdf8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: transform .15s;
+}
+button.toggle[aria-checked="true"] .sw { background: linear-gradient(180deg, #e9c25e, #c9972e); }
+button.toggle[aria-checked="true"] .sw::after { transform: translateX(18px); }
+.jk-cap { margin: 6px 0 0; font-size: 14px; color: var(--ink); font-weight: 600; text-align: center; }
+.jk-cap small { color: var(--muted); font-weight: 500; }
+.jk-pick { display: flex; justify-content: center; gap: 8px; }
+button.jk-opt {
+  flex: 1 1 0; max-width: 96px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px 6px;
+  background: #f3e8cf; border: 1px solid #e6d6b0; box-shadow: none; font-size: 13.5px;
+}
+button.jk-opt .tile { cursor: inherit; --tw: 34px; --th: 46px; }
+button.jk-opt[aria-checked="true"] { background: #fff4d0; border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-hi); color: var(--wine); }
+button.jk-opt[aria-checked="true"] span::before { content: '✓ '; }
+
+/* ---------- 처음 오신 분 안내 (상태줄 바로 아래 말풍선, 받침을 가리지 않음) ---------- */
+.coach {
+  position: relative; z-index: 3; margin: 2px auto 4px; width: calc(100% - 20px); max-width: 720px; padding: 8px 10px 8px 12px; border-radius: 12px; flex: none;
+  background: var(--parch); color: var(--ink); border: 1px solid var(--gold); box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+  display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 1.4; cursor: pointer; animation: coach-in .25s ease-out;
+}
+.coach::before {
+  content: ''; position: absolute; top: -7px; left: 50%; width: 12px; height: 12px; margin-left: -6px;
+  background: var(--parch); border-left: 1px solid var(--gold); border-top: 1px solid var(--gold); transform: rotate(45deg);
+}
+.coach .ct { flex: 1; word-break: keep-all; }
+.coach .ct::before { content: '🕊 '; }
+.coach button { flex: none; min-height: 40px; padding: 4px 8px; font-size: 12.5px; background: transparent; box-shadow: none; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
+body.big .coach { font-size: 16px; }
+/* 안내가 떠 있는 동안 채팅 말풍선(상태줄 바로 아래에 뜸)은 안내 아래로 비켜서 둘 다 보이게 */
+body:has(#coach:not(.hidden)) #chatBubble { translate: 0 calc(var(--coach-h, 60px) + 4px); }
+@keyframes coach-in { from { opacity: 0; transform: translateY(-4px); } }
+
+/* 게임 위 '?' (규칙) — 좁은 화면에선 ⋯ 메뉴 안의 '규칙 한눈에'로 */
+@media (max-width: 420px) { #btnRules { display: none; } }
+
+/* ---------- 말 고르기: 한국어 | English (처음 화면·대기실 아래, ⋯ 메뉴 '내 화면 설정' 맨 위) ---------- */
+.lang-switch {
+  display: inline-flex; align-self: center; gap: 2px; padding: 3px; margin: 2px auto 0;
+  border-radius: 999px; background: #efe4c9; border: 1px solid #dcc58e;
+}
+.lang-switch button {
+  min-height: 40px; min-width: 78px; padding: 4px 14px; border-radius: 999px; font-size: 14px; font-weight: 600;
+  background: transparent; color: var(--muted); box-shadow: none;
+}
+.lang-switch button[aria-pressed="true"] {
+  background: linear-gradient(180deg, #f4d983, #d9ad45); color: #2e1f00; cursor: default;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), inset 0 -2px 0 rgba(120, 80, 0, .28);
+}
+.prefs .lang-switch { margin: 0 auto 4px; }
+
+/* ---------- 좁은 폰 + 큰 타일: 자리표 글씨는 작게 유지 (4명이 두 줄 안에) ---------- */
+@media (max-width: 420px) {
+  body.big .pchip { font-size: 13px; }
+  /* 4명: '(나)' 글자 대신 내 칩 테두리를 금빛으로 (칩이 두 줄 안에 들어가 테이블 자리가 넉넉하게) */
+  .players.p4 .pchip .me { display: none; }
+  .players.p4 .pchip.self:not(.turn) { border-color: rgba(241, 210, 127, .85); }
+}
+
+/* ---------- 낮은 노트북·짧은 폰 세로: 처음 화면을 조금 촘촘하게 (말 고르기·연습 단추가 첫 화면에) ---------- */
+@media (max-height: 820px) {
+  #home { padding-top: 16px; padding-bottom: 16px; }
+  #home .card { gap: 9px; }
+  #home .card.arch::before { width: 54px; height: 54px; }
+}
+
+/* ---------- 대기실 두 칸: 넓은 화면·폰 가로에서 왼쪽은 초대(QR), 오른쪽은 참가자·시작 (시작 단추가 첫 화면에) ---------- */
+.lobby-col { display: contents; }   /* 좁은 화면에선 칸 없이 한 줄로 (예전 그대로) */
+@media (min-width: 900px), (orientation: landscape) and (max-height: 520px) and (min-width: 600px) {
+  #lobby .card {
+    max-width: 780px; display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); column-gap: 28px; row-gap: 12px; align-items: start;
+    border-radius: 50% 50% 20px 20px / 90px 90px 20px 20px;   /* 넓은 카드는 낮은 아치로 (모서리 글자가 잘리지 않게) */
+  }
+  #lobby .card::before { grid-column: 1 / -1; justify-self: center; }
+  #lobby .lobby-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  #lobby .chat-slot, #btnLeave, #lobby .lang-switch { grid-column: 1 / -1; }
+}
+
+/* ---------- 폰 가로(높이 520px 이하): 테이블 자리를 넉넉하게 ---------- */
+@media (orientation: landscape) and (max-height: 520px) {
+  :root { --tw: 34px; --th: 46px; --tf: 20px; }
+  body.big { --tw: 40px; --th: 55px; --tf: 24px; }
+  body.big .pchip { font-size: 13px; }
+  #game::before { height: 4px; background-size: 42px 4px; }
+  .topbar { padding-top: 3px; padding-bottom: 3px; }
+  .status { min-height: 0; padding-top: 3px; padding-bottom: 3px; }
+  /* 게임 기록 한 줄: 자리를 차지하지 않고 받침 바로 위 왼쪽에 작게 겹쳐 둠 (뽑기·나감 같은 소식을 놓치지 않게) */
+  .log {
+    position: fixed; left: 0; bottom: calc(var(--dock-h, 140px) + 4px); max-width: 55%; z-index: 2; pointer-events: none;
+    padding: 2px 10px; font-size: 11.5px; border-radius: 0 10px 0 0; background: rgba(13, 20, 41, .72);
+  }
+  /* 안내 말풍선은 자리를 차지하지 않고 테이블 오른쪽 아래(받침 바로 위)에 작게 — 묶음은 왼쪽 위부터 쌓이므로 가리지 않음 */
+  .coach {
+    position: fixed; top: auto; left: auto; right: max(10px, env(safe-area-inset-right)); bottom: calc(var(--dock-h, 140px) + 8px);
+    width: min(360px, 46%); margin: 0; padding-top: 5px; padding-bottom: 5px; font-size: 13.5px; line-height: 1.3;
+    pointer-events: none;   /* 아래 묶음을 누르려던 탭은 그대로 통과 ('다시 보지 않기'만 눌림). 7초 뒤 저절로 닫힘 (flow.js) */
+  }
+  .coach::before { display: none; }   /* 위쪽 꼬리는 상태줄 아래일 때만 */
+  body:has(#coach:not(.hidden)) #chatBubble { translate: none; }   /* 말풍선과 안내가 서로 다른 곳에 있으니 비켜 설 필요 없음 */
+  .coach button { pointer-events: auto; }
+  body.big .coach { font-size: 14.5px; }
+  .dock { padding-top: 5px; padding-bottom: calc(5px + env(safe-area-inset-bottom)); }
+  .controls { margin-bottom: 5px; }
+  /* 손패는 두 줄까지 보이고 그 이상은 손패 안에서 스크롤 (고른 타일이 6px 올라가도 잘리지 않게 위 여백) */
+  .rack { max-height: calc(2 * var(--th) + 22px); overflow-y: auto; padding-top: 9px; overscroll-behavior: contain; }
+  /* 대기실: 장미창 빼고 QR을 조금 작게 */
+  #home, #lobby { padding-top: 12px; padding-bottom: 12px; }
+  #lobby .card { border-radius: 20px; padding-top: 18px; }
+  #lobby .card::before { display: none; }
+  #lobby button.qr { width: 150px; height: 150px; }
+  #timerWrap { display: flex; align-items: center; gap: 10px; }   /* '턴 제한 시간'과 고르기를 한 줄로 → 시작 단추가 첫 화면에 */
+  #timerWrap select { flex: 1; min-width: 0; margin-top: 0; }
+  .table { padding-top: 7px; padding-bottom: 7px; row-gap: 10px; }
+  /* ⋯ 메뉴: 버튼은 왼쪽, 내 화면 설정은 오른쪽 (큰 타일·효과 줄이기가 스크롤 없이 보이게) */
+  .menu-card {
+    max-width: 760px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: repeat(6, auto) 1fr;
+    column-gap: 16px; row-gap: 8px; align-items: start;
+  }
+  .menu-card h3 { grid-column: 1 / -1; margin: 0; }
+  .menu-card .prefs { grid-column: 2; grid-row: 2 / -1; border-top: 0; padding-top: 0; }
+  /* 시상식: 한 판 더·공유·이야기를 한 줄로 (시상식 창이 더 보이게) */
+  .ceremony { max-width: 640px; }
+  .ov-actions { flex-direction: row; flex-wrap: wrap; align-items: center; padding-top: 8px; padding-bottom: 8px; }
+  .ov-actions #btnAgain { flex: 1 1 180px; width: auto; }
+  .ov-actions .ov-row { flex: 2 1 300px; }
+  .ov-actions #ovHint { flex-basis: 100%; order: 3; }
+}
+
+/* ---------- 가로로 든 아이폰: 노치·둥근 모서리 쪽 여백 (데스크톱에선 env()가 0이라 그대로) ---------- */
+@media (orientation: landscape) {
+  .topbar, .status, .table { padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); }
+  .log, .chat.sheet { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+  .dock { padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
+}
+
+/* ---------- 큰 화면(TV·큰 모니터): 타일을 크게, 버튼·손패는 가운데로 모음 ---------- */
+@media (min-width: 1400px) and (min-height: 860px) {
+  :root { --tw: 50px; --th: 70px; --tf: 30px; }
+  body.big { --tw: 60px; --th: 84px; --tf: 36px; }
+  .controls, .rack { max-width: 1400px; margin-left: auto; margin-right: auto; }
+  .table { width: 100%; max-width: 1500px; margin-left: auto; margin-right: auto; }
+}

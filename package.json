@@ -1,0 +1,13 @@
+{
+  "name": "fellowship-rummikub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Self-hosted multiplayer tile game",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

@@ -1,0 +1,11 @@
+# Optional Blueprint. Manual Web Service setup uses the same settings.
+services:
+  - type: web
+    name: fellowship-rummikub
+    runtime: node
+    plan: free
+    numInstances: 1
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/info
+    autoDeploy: true

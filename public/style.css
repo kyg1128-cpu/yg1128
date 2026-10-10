@@ -1,0 +1,592 @@
+/* 루미큐브 온라인 — 예배당 분위기: 상아색 양피지 · 짙은 남색 · 와인 · 금빛, 스테인드글라스 포인트 */
+:root {
+  --navy: #16213e; --navy-2: #22355f; --navy-deep: #0d1429;
+  --wine: #6e1f30; --wine-2: #4a1320;
+  --gold: #d4ae55; --gold-hi: #f1d27f; --gold-deep: #8a6620;
+  --parch: #fbf5e7; --parch-2: #f3e9d2; --line: #e3d4b0;
+  --cream: #f6efdc;                                   /* 어두운 바탕 위 글자 */
+  --tile: #fffaf0; --tile-edge: #d8caa6; --ink: #2a2333;
+  --c0: #d62828; --c1: #1d5bd8; --c2: #c96500; --c3: #1b1b1b;   /* 주황은 상아색 위에서 읽히도록 조금 진하게 */
+  --joker: #6b2d8f;                                   /* 조커 ✦ (예배 보라색) */
+  --accent: #f2c94c; --bad: #ff5a5a; --muted: #6f6452;
+  --serif: "Gowun Batang", "Nanum Myeongjo", "Noto Serif KR", "AppleMyungjo", "Batang", "바탕", serif;
+  --tw: 36px; --th: 50px; --tf: 21px;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  background: var(--navy-deep); color: var(--ink);
+}
+.hidden { display: none !important; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* 밝은 양피지 카드 위에서는 금빛 테두리가 잘 안 보이므로 와인색으로 (명암비 3:1 이상) */
+.card :focus-visible, .chat :focus-visible { outline-color: var(--wine); }
+[tabindex="-1"]:focus { outline: none; }   /* 제목처럼 코드로만 초점을 주는 곳은 테두리 없이 */
+
+button {
+  font: inherit; border: 0; border-radius: 10px; padding: 9px 14px; cursor: pointer; min-height: 42px;
+  background: #efe4c9; color: var(--ink); font-weight: 600;
+  box-shadow: inset 0 -2px 0 rgba(90, 60, 10, .14);
+}
+button:active:not(:disabled) { transform: translateY(1px); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary {
+  background: linear-gradient(180deg, #f4d983, #d9ad45); color: #2e1f00;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), inset 0 -2px 0 rgba(120, 80, 0, .28);
+}
+button.danger { background: #f5dde0; color: #8e1b2e; }
+button.ghost { background: transparent; color: var(--muted); box-shadow: none; }
+button.big { padding: 13px 18px; font-size: 17px; width: 100%; }
+button.small { padding: 4px 10px; }
+input, select {
+  font: inherit; padding: 11px 12px; border: 1px solid #d9c89e; border-radius: 10px; width: 100%;
+  background: #fffdf8; color: var(--ink);
+}
+input:focus, select:focus { outline: none; border-color: var(--wine); box-shadow: 0 0 0 3px rgba(110, 31, 48, .25); }
+input::placeholder { color: #a99d86; }
+label { display: block; text-align: left; font-size: 14px; color: var(--muted); }
+/* 입력칸 글씨는 16px 이상 — 아이폰 Safari가 칸을 누를 때 화면을 확대하지 않게 (이름표 글씨만 14px) */
+label input, label select { margin-top: 4px; color: var(--ink); font-size: 16px; }
+
+/* 홈 / 대기실 — 스테인드글라스 빛이 비치는 밤 예배당 */
+.screen { min-height: 100%; }
+#home, #lobby {
+  display: flex; align-items: center; justify-content: center; padding: 28px 16px;
+  background:
+    radial-gradient(ellipse 55% 32% at 12% 6%, rgba(168, 40, 62, .40), transparent 70%),
+    radial-gradient(ellipse 50% 32% at 90% 10%, rgba(43, 88, 168, .48), transparent 70%),
+    radial-gradient(ellipse 45% 28% at 85% 94%, rgba(46, 122, 90, .26), transparent 70%),
+    radial-gradient(ellipse 50% 28% at 10% 92%, rgba(122, 70, 168, .30), transparent 70%),
+    linear-gradient(180deg, #19264c 0%, #0d1429 100%);
+}
+.card {
+  background: var(--parch); border: 1px solid #dcc58e; border-radius: 18px; padding: 22px;
+  width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px;
+  /* 안쪽 금선 한 줄 */
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .45), inset 0 0 0 5px var(--parch), inset 0 0 0 6px rgba(201, 162, 74, .6);
+}
+/* 예배당 창문처럼 위가 둥근 카드 + 장미창 */
+.card.arch { border-radius: 50% 50% 20px 20px / 150px 150px 20px 20px; padding-top: 26px; }
+.card.arch::before {
+  content: ''; align-self: center; flex: none; width: 54px; height: 54px; margin-bottom: -2px;
+  background: url(window.svg) center / contain no-repeat;
+  filter: drop-shadow(0 2px 5px rgba(110, 31, 48, .3));
+}
+#home .card.arch::before { width: 70px; height: 70px; }
+/* 결과·메뉴 카드 윗단의 스테인드글라스 띠 */
+.card.glass { position: relative; overflow: hidden; padding-top: 30px; }
+.card.glass::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 9px;
+  background: url(glass.svg) center top / 54px 9px repeat-x; border-bottom: 1px solid var(--gold);
+}
+.center { text-align: center; }
+h1, h2, h3 { font-family: var(--serif); color: var(--wine); font-weight: 700; }
+h1 { margin: 0; font-size: 28px; letter-spacing: -.01em; }
+h2, h3 { margin: 4px 0; }
+.muted { color: var(--muted); margin: 0; font-size: 14px; word-break: keep-all; text-wrap: balance; }
+.logo { display: flex; justify-content: center; gap: 5px; }
+.logo .tile { cursor: default; }
+.verse { margin: 0; padding: 10px 4px 0; border-top: 1px solid var(--line); }
+.verse blockquote {
+  margin: 0; font-family: var(--serif); font-size: 16px; line-height: 1.65; color: var(--wine);
+  word-break: keep-all;
+}
+.verse figcaption { margin-top: 3px; font-size: 12px; color: var(--gold-deep); letter-spacing: .08em; }
+.verse figcaption::before { content: '— '; }
+.or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--gold)); }
+.or::after { transform: scaleX(-1); }
+.row { display: flex; gap: 8px; } .row input { text-transform: uppercase; letter-spacing: 3px; text-align: center; }
+.row button { width: auto; white-space: nowrap; }
+.botrow button { flex: 1 1 0; min-width: 0; padding: 10px 6px; font-size: 15px; line-height: 1.3; white-space: normal; word-break: keep-all; }
+.botrow:not(:has(> button:not(.hidden))) { display: none; }   /* 방장이 아니면 줄째로 숨김 */
+.rules { text-align: left; font-size: 14px; color: #4a4038; }
+.rules summary { cursor: pointer; color: var(--muted); padding: 11px 0; margin: -8px 0 -11px; }
+.rules ul { padding-left: 18px; margin: 8px 0 0; line-height: 1.55; }
+.bigcode {
+  font-family: var(--serif); font-size: 46px; font-weight: 700; line-height: 1.1;
+  letter-spacing: 10px; padding-left: 10px; color: var(--navy);
+}
+.plist { list-style: none; margin: 0; padding: 0; text-align: left; }
+.plist li {
+  padding: 8px 10px 8px 12px; min-height: 44px; border-radius: 10px; background: #f3e8cf;
+  border: 1px solid #e6d6b0; margin-bottom: 6px; display: flex; gap: 8px; align-items: center;
+}
+.plist .tag { font-size: 12px; background: linear-gradient(180deg, #f4d983, #dcb04a); color: #3a2800; border-radius: 6px; padding: 1px 6px; }
+.plist .off { opacity: .45; }
+.plist .grow { flex: 1; }
+.plist .x { padding: 4px 10px; min-width: 40px; min-height: 40px; margin: -6px -6px -6px 0; background: transparent; color: var(--muted); font-size: 16px; box-shadow: none; }
+/* 봇 난이도 표 — 방장은 눌러서 바꿈, 다른 사람에겐 disabled */
+.plist .lv {
+  flex: none; padding: 4px 11px; min-height: 28px; font-size: 12.5px; font-weight: 700; line-height: 1.2;
+  border-radius: 999px; border: 1px solid; box-shadow: 0 1px 0 rgba(90, 60, 10, .12); position: relative;
+}
+.plist .lv::before { content: ''; position: absolute; inset: -8px -4px; }   /* 보이는 크기는 작게, 누르는 범위는 넉넉히 */
+.plist .lv.easy { background: #e4eedd; color: #35652f; border-color: #b4cea6; }
+.plist .lv.hard { background: #f3dfe3; color: #8e1b2e; border-color: #ddb0b9; }
+.plist .lv:disabled { opacity: 1; cursor: default; box-shadow: none; }
+
+/* 타일 */
+.tile {
+  width: var(--tw); height: var(--th); flex: none; border-radius: 6px; background: var(--tile);
+  border: 1px solid var(--tile-edge); box-shadow: 0 2px 0 var(--tile-edge), 0 3px 4px rgba(0, 0, 0, .28);
+  display: inline-flex; align-items: center; justify-content: center; position: relative;
+  font: 800 var(--tf)/1 Arial, "Malgun Gothic", sans-serif; cursor: pointer;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;   /* 아이폰: 길게 눌러도 숫자 선택·복사 풍선이 안 뜨게 */
+  transition: transform .08s;
+}
+.tile.c0 { color: var(--c0); } .tile.c1 { color: var(--c1); } .tile.c2 { color: var(--c2); } .tile.c3 { color: var(--c3); }
+/* 조커: 베들레헴의 별 ✦ — 은은한 금빛 후광 */
+.tile.joker {
+  color: var(--joker); font-family: "Segoe UI Symbol", "Apple Symbols", "Noto Sans Symbols 2", "Noto Sans Symbols2", Arial, sans-serif;
+  font-weight: 400; font-size: calc(var(--tf) + 4px);
+  background: radial-gradient(circle at 50% 48%, #ffeeb5 0, #fff6dc 42%, var(--tile) 72%);
+  text-shadow: 0 0 6px rgba(236, 189, 79, .95);
+}
+/* 조커 모양 고르기: 십자가는 굵게, 비둘기(그림 문자)는 후광 없이 조금 작게 */
+body[data-joker="cross"] .tile.joker { font-weight: 700; }
+body[data-joker="dove"] .tile.joker { font-size: calc(var(--tf) - 1px); text-shadow: none; }
+.tile.joker[data-as]::after {
+  content: attr(data-as); position: absolute; bottom: 2px; right: 3px;
+  font: 700 10px/1 Arial, sans-serif; color: #6e6387; text-shadow: none;
+}
+.tile.fresh {
+  background: #fff3d3;
+  box-shadow: inset 0 0 0 2px #e2b54a, 0 2px 0 var(--tile-edge), 0 3px 4px rgba(0, 0, 0, .28);
+}
+.tile.sel {
+  transform: translateY(-6px);
+  box-shadow: 0 0 0 3px var(--accent), 0 0 14px rgba(242, 201, 76, .55), 0 6px 10px rgba(0, 0, 0, .35);
+}
+.tile.fresh.sel { box-shadow: inset 0 0 0 2px #e2b54a, 0 0 0 3px var(--accent), 0 0 14px rgba(242, 201, 76, .55), 0 6px 10px rgba(0, 0, 0, .35); }
+.tile.newdraw { animation: pop .6s ease; }
+@keyframes pop { 0% { transform: scale(.4); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+/* 게임 화면 — 짙은 남색 벨벳 테이블, 와인색 손패 받침 */
+#game {
+  display: flex; flex-direction: column; height: 100vh; height: 100dvh; color: var(--cream);
+  padding-top: env(safe-area-inset-top);
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;   /* 게임판은 글자 선택 없이 (채팅 창은 #game 밖이라 그대로) */
+  overflow-x: hidden; overflow-x: clip;   /* 상태줄이 살짝 흔들릴 때(완료 안내) 화면이 옆으로 밀리지 않게 */
+  background:
+    radial-gradient(ellipse 80% 45% at 50% 0%, rgba(241, 210, 127, .10), transparent 70%),
+    radial-gradient(circle at 50% 45%, var(--navy-2), #121b37 78%);
+}
+#game::before { content: ''; flex: none; height: 8px; background: url(glass.svg) center top / 42px 7px repeat-x; border-bottom: 1px solid rgba(212, 174, 85, .5); }
+.topbar {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  background: rgba(6, 10, 24, .35); border-bottom: 1px solid rgba(212, 174, 85, .28);
+}
+/* 좁은 화면에서도 4명이 다 보이도록 칩을 두 줄로 접음 (옆으로 숨지 않게) */
+.players { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
+.pchip {
+  flex: none; padding: 5px 10px; border-radius: 999px; font-size: 13px; white-space: nowrap;
+  background: rgba(255, 248, 230, .10); border: 1px solid rgba(255, 248, 230, .14);
+}
+.pchip b { font-weight: 700; }
+.pchip.turn {
+  background: linear-gradient(180deg, #f4d983, #dcb04a); color: #2e1f00; border-color: transparent;
+  box-shadow: 0 0 12px rgba(241, 210, 127, .45);
+}
+.pchip.off { opacity: .45; }
+.pchip .cnt { display: inline-block; min-width: 20px; margin-left: 4px; padding: 0 5px; border-radius: 6px; background: rgba(0, 0, 0, .22); text-align: center; }
+.meta { display: flex; gap: 10px; align-items: center; font-size: 13px; white-space: nowrap; color: rgba(246, 239, 220, .85); }
+.meta button { color: var(--cream); min-width: 40px; min-height: 40px; margin: -8px -6px -8px -4px; font-size: 18px; line-height: 1; }
+#clock.warn { color: #ff7a7a; font-weight: 800; }
+.status { text-align: center; padding: 6px 10px; font-size: 14px; min-height: 30px; color: rgba(246, 239, 220, .85); }
+.status.mine {
+  /* 내 차례 띠: 와인색 휘장 + 금빛 글씨 (남색 위에 금빛을 섞으면 탁한 회색이 됨) */
+  background: linear-gradient(90deg, transparent, rgba(128, 30, 52, .78) 22%, rgba(128, 30, 52, .78) 78%, transparent);
+  color: var(--gold-hi); font-weight: 700;
+}
+.table { flex: 1; overflow: auto; padding: 10px; display: flex; flex-wrap: wrap; align-content: flex-start; align-items: flex-start; gap: 14px 14px; }
+.set {
+  position: relative;
+  display: flex; gap: 2px; padding: 5px; border-radius: 10px; background: rgba(255, 248, 230, .07);
+  border: 2px solid transparent; min-height: calc(var(--th) + 14px); align-items: center;
+}
+.set.target { cursor: pointer; border-style: dashed; border-color: rgba(241, 210, 127, .6); }
+.set.target:hover, .set.over { background: rgba(241, 210, 127, .2); }
+/* 묶음 상태는 아래 '묶음이 맞는 순간' 절에서 (만드는 중엔 빨강을 쓰지 않음) */
+.slot {
+  width: calc(var(--tw) - 6px); height: var(--th); border: 2px dashed rgba(246, 239, 220, .6); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; color: var(--cream); font-size: 20px; margin-left: 3px;
+}
+.newset {
+  padding: 5px 14px; color: rgba(246, 239, 220, .85); font-size: 14px; min-width: 120px; justify-content: center;
+  border: 2px dashed rgba(246, 239, 220, .4);
+}
+.newset.target { border-color: rgba(241, 210, 127, .75); color: var(--gold-hi); }
+.empty-hint { margin: auto; color: rgba(246, 239, 220, .72); font-size: 15px; font-family: var(--serif); }
+.log { font-size: 12px; color: rgba(246, 239, 220, .65); padding: 2px 12px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dock {
+  background: linear-gradient(180deg, #651c2c, var(--wine-2));
+  border-top: 1px solid rgba(212, 174, 85, .6);
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 14px rgba(0, 0, 0, .35);
+}
+.controls { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+.controls .spacer { flex: 1; }
+.controls button { padding: 9px 11px; min-width: 44px; }
+.controls button:disabled { opacity: 1; background: rgba(255, 248, 230, .1); color: rgba(246, 239, 220, .5); box-shadow: none; }
+.rack {
+  display: flex; flex-wrap: wrap; gap: 4px 3px; min-height: calc(var(--th) + 10px); padding: 5px; border-radius: 10px;
+  background: rgba(25, 4, 11, .35); border: 1px solid rgba(212, 174, 85, .22); box-shadow: inset 0 2px 6px rgba(0, 0, 0, .45);
+}
+.rack.target { outline: 2px dashed var(--gold-hi); outline-offset: 1px; cursor: pointer; }
+.rack.armed { cursor: pointer; }
+.rack.over { background-color: rgba(241, 210, 127, .16); }   /* 끌고 있는 타일을 놓을 곳 */
+/* 테이블 타일을 손패로 돌려놓을 자리 (손패가 꽉 차도 누를 곳이 있게) */
+.rack .rack-slot { min-width: 44px; margin-left: 0; cursor: pointer; color: var(--gold-hi); border-color: rgba(241, 210, 127, .7); }
+
+/* 결과 / 메뉴 */
+.overlay { position: fixed; inset: 0; background: rgba(8, 12, 28, .62); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+#ovTitle { font-size: 24px; }
+#menuCode { color: var(--navy); letter-spacing: 3px; }
+.results { width: 100%; border-collapse: collapse; font-size: 15px; }
+.results td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+.results td.num { text-align: right; font-weight: 700; }
+.results .plus { color: #2f7a3b; } .results .minus { color: #a8283e; }
+.results .mini { display: flex; flex-wrap: wrap; gap: 2px; --tw: 18px; --th: 24px; --tf: 11px; }
+.results .mini .tile { box-shadow: none; }
+.results .mini .tile.joker { font-size: 13px; text-shadow: none; }
+.toast {
+  position: fixed; left: 50%; bottom: 150px; transform: translateX(-50%); z-index: 20;
+  background: rgba(22, 33, 62, .96); color: var(--parch); border: 1px solid rgba(212, 174, 85, .55);
+  padding: 10px 16px; border-radius: 12px; font-size: 14px; max-width: calc(100% - 32px); text-align: center;
+  width: max-content; word-break: keep-all; text-wrap: balance;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .35); pointer-events: none;   /* 떠 있는 동안에도 아래 버튼이 눌리게 */
+}
+
+/* 채팅 — 대기실에선 카드 속 상자, 게임 중엔 아래에서 올라오는 창(넓은 화면은 오른쪽 아래 창) */
+.chat { display: flex; flex-direction: column; color: var(--ink); text-align: left; min-height: 0; }
+.chat.inline { background: #fffaf0; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px 10px; }
+.chat.inline .chat-head { padding: 2px 2px 6px; }
+.chat.inline #btnChatClose { display: none; }
+.chat.inline .chat-list { height: 150px; flex: none; }
+.chat.sheet {
+  position: fixed; z-index: 15; left: 0; right: 0; bottom: 0; height: min(62dvh, 520px);
+  background: var(--parch); border-top: 1px solid var(--gold); border-radius: 18px 18px 0 0;
+  padding: 9px 12px calc(10px + env(safe-area-inset-bottom)); overflow: hidden;
+  box-shadow: 0 -12px 32px rgba(0, 0, 0, .5); animation: sheet-up .2s ease;
+}
+.chat.sheet::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 9px;
+  background: url(glass.svg) center top / 54px 9px repeat-x; border-bottom: 1px solid var(--gold);
+}
+@keyframes sheet-up { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (min-width: 900px) {
+  /* 넓은 화면: 오른쪽 창 — 받침(뽑기·완료·손패) 위에 떠서 버튼을 가리지 않음 (--dock-h는 app.js가 잼) */
+  .chat.sheet {
+    left: auto; right: max(16px, env(safe-area-inset-right)); width: 360px; border: 1px solid var(--gold); border-radius: 16px;
+    bottom: calc(var(--dock-h, 140px) + 12px);
+    height: 480px; height: min(480px, calc(100dvh - var(--dock-h, 140px) - 76px));
+  }
+}
+@media (min-width: 900px) and (min-height: 521px) {
+  body.chat-open .table { padding-right: 386px; }   /* 채팅 창이 열려 있으면 테이블 묶음이 창 옆으로 비켜 섬 */
+}
+/* 태블릿 세로(700~899px): 아래 창이 받침(버튼·손패)을 가리지 않게 받침 바로 위에 */
+@media (min-width: 700px) and (max-width: 899px) and (min-height: 600px) {
+  .chat.sheet { bottom: var(--dock-h, 140px); height: min(45dvh, 420px); padding-bottom: 10px; }
+}
+/* 낮은 화면(폰 가로·키보드가 뜬 때): 위에서 아래까지 — 닫기 단추가 늘 화면 안에, 키보드가 뜨면 자주 쓰는 말은 잠깐 숨김 */
+@media (max-height: 520px) {
+  .chat.sheet { top: max(8px, env(safe-area-inset-top, 0px)); bottom: 0; left: 0; right: 0; width: auto; height: auto; border-width: 1px 0 0; border-radius: 18px 18px 0 0; }
+  .chat.sheet .chat-head { padding-top: 4px; padding-bottom: 2px; }
+  .chat.sheet:has(#chatInput:focus) .chat-quick { display: none; }   /* 입력칸에 초점일 때만 (자주 쓰는 말 단추를 누를 때 숨으면 탭이 빗나감) */
+}
+.chat-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 2px 6px; }
+.chat-head b { font-family: var(--serif); color: var(--wine); font-size: 16px; }
+.chat-head button { min-width: 40px; min-height: 40px; margin: -6px -6px -6px 0; font-size: 16px; color: var(--muted); }
+.chat-list {
+  list-style: none; margin: 0; padding: 4px 2px; flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 7px; overscroll-behavior: contain;
+}
+.chat-empty { margin: auto; color: var(--muted); font-size: 13px; text-align: center; word-break: keep-all; }
+.msg { max-width: 82%; align-self: flex-start; }
+.msg .who { font-size: 11.5px; color: var(--muted); margin: 0 0 2px 6px; }
+.msg .txt {
+  background: #f1e5c8; border: 1px solid #e3d2a6; border-radius: 4px 14px 14px 14px; padding: 7px 11px;
+  font-size: 14.5px; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-wrap;
+}
+.msg.bot .txt { background: #ece6f4; border-color: #d6cbe8; }
+.msg.mine { align-self: flex-end; }
+.msg.mine .who { display: none; }
+.msg.mine .txt { background: linear-gradient(180deg, #f6dc8e, #e8c062); border-color: #d6ab45; border-radius: 14px 4px 14px 14px; color: #2e1f00; }
+.chat-quick { display: flex; gap: 6px; overflow-x: auto; padding: 7px 0; scrollbar-width: none; flex: none; }
+.chat-quick::-webkit-scrollbar { display: none; }
+.chat-quick button {
+  flex: none; min-height: 40px; padding: 4px 12px; border-radius: 999px; font-size: 13.5px; font-weight: 600;
+  background: #f3e8cf; border: 1px solid #e3d2a6; box-shadow: none;
+}
+.chat-form { display: flex; gap: 8px; flex: none; }
+.chat-form input { flex: 1; min-width: 0; }
+.chat-form button { flex: none; padding: 9px 16px; }
+.badge {
+  display: inline-block; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; vertical-align: middle;
+  background: var(--bad); color: #fff; font: 700 11px/18px Arial, sans-serif; text-align: center;
+}
+#btnChat { position: relative; }
+#btnChat .badge { position: absolute; top: 0; right: -2px; box-shadow: 0 0 0 2px #1a2546; }
+#btnChat2 { position: relative; }
+#btnChat2 .badge { position: absolute; top: -8px; right: 3px; box-shadow: 0 0 0 2px var(--parch); }   /* 버튼 폭을 늘리지 않게 모서리에 */
+.chat-bubble {
+  position: fixed; z-index: 14; top: calc(env(safe-area-inset-top) + 74px); left: 50%; transform: translateX(-50%);
+  width: max-content; max-width: calc(100% - 32px); padding: 8px 14px; border-radius: 14px; cursor: pointer;
+  background: var(--parch); color: var(--ink); border: 1px solid var(--gold); font-size: 14px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 8px 22px rgba(0, 0, 0, .45);
+  animation: bubble-in .22s ease;
+}
+.chat-bubble b { color: var(--wine); margin-right: 6px; }
+.chat-bubble.pass { pointer-events: none; }   /* 내 차례엔 말풍선을 눌러도 아래 묶음·＋새 묶음이 눌리게 (채팅은 💬 배지로) */
+@keyframes bubble-in { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+/* 넓은 화면·폰 가로: 말풍선은 💬 쪽(오른쪽)에 붙여 둠 — 묶음은 왼쪽 위부터 쌓이므로 덜 가림 */
+@media (min-width: 700px), (orientation: landscape) and (max-height: 520px) {
+  .chat-bubble { left: auto; right: max(12px, env(safe-area-inset-right)); transform: none; max-width: min(calc(100% - 24px), 440px); animation-name: bubble-in-r; }
+}
+@keyframes bubble-in-r { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+@media (min-width: 700px) { :root { --tw: 42px; --th: 58px; --tf: 25px; } }
+@media (max-width: 420px) {
+  .topbar { padding: 7px 8px; gap: 6px; }
+  .pchip { padding: 4px 7px; font-size: 12px; } .players { gap: 4px; }
+  .pchip .cnt { margin-left: 3px; padding: 0 4px; min-width: 18px; }
+  /* 더미·시간을 두 줄로 쌓아 칩 자리를 넓힘 */
+  .meta { display: grid; grid-template-columns: auto auto auto; column-gap: 2px; row-gap: 1px; justify-items: end; align-items: center; font-size: 12px; }
+  #poolCount { grid-area: 1 / 1; } #clock { grid-area: 2 / 1; }
+  #btnChat { grid-area: 1 / 2 / 3 / 3; } #btnMenu { grid-area: 1 / 3 / 3 / 4; margin-right: -4px; }
+}
+@media (max-width: 380px) {
+  :root { --tw: 31px; --th: 44px; --tf: 18px; }
+  .controls button { padding: 8px 8px; font-size: 14px; }
+  .card { padding-left: 16px; padding-right: 16px; }
+  .botrow button { font-size: 14px; padding: 10px 2px; }
+}
+
+/* ================= 손맛: 한 수 취소 · 묶음이 맞는 순간 · 턴 확정 연출 · 자리표 ================= */
+
+/* --- 한 수 / 처음 / 완료 (아래 받침) --- */
+.controls button.ic { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.controls button.ic svg {
+  width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor;
+  stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round;
+}
+#btnDone { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; }
+#btnDone .why { display: block; font-size: 10.5px; font-weight: 600; opacity: .9; white-space: nowrap; }
+#btnDone .why.hidden { display: none !important; }
+/* 아직 못 내는 상태: 금빛 대신 차분한 크림색 — 눌러 보면 무엇을 고칠지 알려 줌 */
+.controls #btnDone.blocked {
+  background: rgba(255, 248, 230, .14); color: var(--cream);
+  box-shadow: inset 0 0 0 1px rgba(241, 210, 127, .5);
+}
+@media (min-width: 600px) {
+  #btnDone { flex-direction: row; gap: 5px; }
+  #btnDone .why { font-size: 13px; }
+  #btnDone .why::before { content: '('; } #btnDone .why::after { content: ')'; }
+}
+/* 내 차례가 시작될 때 받침이 한 번 금빛으로 */
+.dock.glow { animation: dock-glow .6s ease-out; }
+@keyframes dock-glow {
+  0% { box-shadow: 0 -4px 14px rgba(0, 0, 0, .35), inset 0 0 0 0 rgba(241, 210, 127, 0); }
+  35% { box-shadow: 0 -6px 26px rgba(241, 210, 127, .5), inset 0 2px 0 0 rgba(241, 210, 127, .95); }
+  100% { box-shadow: 0 -4px 14px rgba(0, 0, 0, .35), inset 0 0 0 0 rgba(241, 210, 127, 0); }
+}
+
+/* --- 묶음이 맞는 순간 --- */
+/* 만드는 중(아직 안 맞음): 빨강 대신 크림색 점선 + 아래에 이유 한 줄 */
+.set.pending { flex-direction: column; align-items: flex-start; }
+.set.pending .tiles { display: flex; gap: 2px; align-items: center; }
+.set.pending:not(.target) { border-style: dashed; border-color: rgba(246, 239, 220, .5); }
+/* 이유는 한 줄 (묶음 상자가 글자만큼 넓어짐). 화면보다 길 때만 줄바꿈 */
+.set .why { margin-top: 4px; max-width: calc(100vw - 48px); line-height: 1.3; text-align: left; }
+.set .why span {
+  display: inline-block; padding: 1px 7px; border-radius: 6px; vertical-align: top;
+  background: rgba(246, 239, 220, .13); color: var(--cream); font-size: 11.5px; font-weight: 600;
+  word-break: keep-all; overflow-wrap: anywhere;
+}
+.set .why.short span { white-space: nowrap; }
+/* 맞는 새 묶음: 얇은 금테 + 점수 */
+.set.fit { border-style: solid; border-color: rgba(212, 174, 85, .85); }
+.set .val {
+  position: absolute; top: -9px; right: -7px; z-index: 1; min-width: 22px; height: 18px; padding: 0 5px;
+  border-radius: 9px; background: linear-gradient(180deg, #f4d983, #dcb04a); color: #2e1f00;
+  font: 800 11px/18px Arial, sans-serif; text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, .4); pointer-events: none;
+}
+.set.justfit { animation: fit-pop .22s ease-out, fit-glow .9s ease-out; }
+@keyframes fit-pop { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes fit-glow {
+  0% { box-shadow: 0 0 0 0 rgba(241, 210, 127, 0); }
+  25% { box-shadow: 0 0 18px 4px rgba(241, 210, 127, .6); }
+  100% { box-shadow: 0 0 0 0 rgba(241, 210, 127, 0); }
+}
+/* 완료를 눌렀는데 안 맞을 때만: 와인색 + 살짝 흔들기 (빨강은 여기서만) */
+.set.oops, .set.pending.oops:not(.target) {
+  border-style: solid; border-color: #c2405a; background: rgba(110, 31, 48, .42);
+  box-shadow: 0 0 12px rgba(194, 64, 90, .5);
+}
+.set.oops .why span { background: #8e1b2e; color: #fff; }
+.set.oops.shake { animation: oops-shake .3s ease-in-out; }
+@keyframes oops-shake {
+  20% { transform: translateX(-5px); } 40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); } 80% { transform: translateX(2px); }
+}
+
+/* 첫 등록 계량기 */
+.status .st-main { white-space: nowrap; }
+.status .soon { color: var(--gold-hi); font-weight: 700; }
+.status .hint { white-space: nowrap; font-weight: 600; opacity: .85; }
+.meter { display: inline-flex; align-items: center; gap: 7px; vertical-align: middle; }
+.meter .bar {
+  display: inline-block; width: 70px; height: 6px; border-radius: 3px; overflow: hidden;
+  background: rgba(246, 239, 220, .22); box-shadow: inset 0 0 0 1px rgba(241, 210, 127, .25);
+}
+.meter .bar i { display: block; height: 100%; width: 0; border-radius: 3px; background: linear-gradient(90deg, #c9972e, #f1d27f); transition: width .25s ease; }
+.status.ready { background: linear-gradient(90deg, transparent, rgba(160, 118, 30, .55) 18%, rgba(160, 118, 30, .55) 82%, transparent); color: #fff4cf; }
+.status.ready .meter .bar { box-shadow: 0 0 8px rgba(241, 210, 127, .8); }
+.status.nudge { animation: oops-shake .3s ease-in-out; }
+
+/* --- 턴 확정 연출 --- */
+.set.rv { border-style: solid; border-color: var(--gold-hi); box-shadow: 0 0 16px rgba(241, 210, 127, .55); }
+.set.rv.sweep {
+  background-image: linear-gradient(100deg, transparent 35%, rgba(241, 210, 127, .5) 50%, transparent 65%);
+  background-size: 260% 100%; background-repeat: no-repeat;
+  animation: rv-sweep .6s ease-out both;
+}
+@keyframes rv-sweep { from { background-position: 120% 0; } to { background-position: -20% 0; } }
+.set.rv .tile:not(.sel) { box-shadow: 0 0 10px rgba(241, 210, 127, .85), 0 2px 0 var(--tile-edge); }
+/* 지난 턴에 놓인 타일: 아래쪽 금빛 받침선 (다음 확정 전까지) */
+.tile.lastmove:not(.sel):not(.fresh) { border-bottom-color: var(--gold); box-shadow: 0 3px 0 var(--gold), 0 4px 5px rgba(0, 0, 0, .3); }
+/* 다른 사람이 놓는 중: 새 타일이 부드럽게 나타남 */
+.tile.fadein { animation: tile-in .12s ease-out; }
+@keyframes tile-in { from { opacity: 0; } }
+/* 조커를 낸 순간 반짝 */
+.tile.shimmer { animation: shimmer .5s ease-in-out 3; }
+@keyframes shimmer { 50% { filter: brightness(1.12) drop-shadow(0 0 7px rgba(241, 210, 127, .95)); } }
+
+.rv-layer { position: fixed; pointer-events: none; z-index: 9; }
+.rv-chip {
+  left: 50%; transform: translateX(-50%); padding: 5px 14px; border-radius: 999px; white-space: nowrap;
+  background: linear-gradient(180deg, #f4d983, #dcb04a); color: #2e1f00; font-weight: 800; font-size: 15px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .45), 0 0 0 1px rgba(255, 255, 255, .35) inset;
+  animation: rv-in .2s ease-out both;
+}
+.rv-chip.soft { font-size: 13.5px; padding: 4px 12px; opacity: .92; }
+.rv-chip.out, .rv-banner.out { transition: opacity .35s ease; opacity: 0; }
+.rv-banner {
+  left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px);
+  padding: 9px 16px; border-radius: 14px; text-align: center; word-break: keep-all; text-wrap: balance;
+  background: var(--parch); color: var(--wine); border: 1px solid var(--gold);
+  font-family: var(--serif); font-weight: 700; font-size: 17px; line-height: 1.35;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .5), inset 0 0 0 3px var(--parch), inset 0 0 0 4px rgba(201, 162, 74, .55);
+  animation: rv-in .25s ease-out both;
+}
+.rv-banner small { display: block; font-family: inherit; font-size: 13.5px; color: var(--gold-deep); }
+@keyframes rv-in { from { opacity: 0; transform: translate(-50%, -8px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+/* 6장 이상·재건축: 위에서 내려오는 금빛 빛줄기 */
+.rv-shaft {
+  background:
+    radial-gradient(ellipse 34% 95% at 50% 0%, rgba(241, 210, 127, .42), transparent 72%),
+    linear-gradient(180deg, rgba(241, 210, 127, .16), transparent 60%);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+  animation: rv-shaft .6s ease-out both;
+}
+@keyframes rv-shaft { 0% { opacity: 0; transform: scaleX(.6); } 35% { opacity: 1; } 100% { opacity: 0; transform: scaleX(1.05); } }
+/* 다 털고 승리: 테이블 가득 스테인드글라스 빛 */
+.rv-burst {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 244, 207, .75), rgba(241, 210, 127, .35) 22%, transparent 48%),
+    radial-gradient(ellipse 45% 40% at 15% 15%, rgba(168, 40, 62, .55), transparent 70%),
+    radial-gradient(ellipse 45% 40% at 85% 18%, rgba(43, 88, 168, .6), transparent 70%),
+    radial-gradient(ellipse 45% 40% at 82% 85%, rgba(46, 122, 90, .5), transparent 70%),
+    radial-gradient(ellipse 45% 40% at 16% 84%, rgba(122, 70, 168, .5), transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 65% at 50% 45%, #000 45%, transparent 100%);
+  mask-image: radial-gradient(ellipse 70% 65% at 50% 45%, #000 45%, transparent 100%);
+  mix-blend-mode: screen; animation: rv-burst 1.2s ease-out both;
+}
+.rv-burst.calmburst { opacity: .45; animation: none; }   /* 효과 줄이기: 움직임 없이 은은한 빛만 잠깐 */
+@keyframes rv-burst { 0% { opacity: 0; transform: scale(.85); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.08); } }
+
+/* --- 자리표 (위 칩) --- */
+.pchip { display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center; position: relative; line-height: 1.25; }
+.pchip .l1 { display: flex; align-items: center; column-gap: 4px; white-space: nowrap; }
+.pchip .cnt { margin-left: 0; }
+.pchip .nm { display: inline-block; max-width: 8em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.pchip .me { font-size: .9em; opacity: .8; margin-left: .25em; }
+/* 첫 등록 전: 작은 글씨 (좁은 화면에선 속 빈 동그라미) */
+.pchip .pre { font-size: 10.5px; color: rgba(246, 239, 220, .62); }
+.pchip .pre .o { display: none; width: 8px; height: 8px; border: 1.5px solid currentColor; border-radius: 50%; vertical-align: middle; }
+.pchip.turn .pre { color: rgba(46, 31, 0, .74); }   /* 금빛 위 작은 글씨: 명암비 4.5:1 이상 */
+/* 다음 차례 */
+.pchip .nx {
+  font-size: 10px; font-weight: 700; line-height: 1.4; padding: 0 5px; border-radius: 6px;
+  color: var(--gold-hi); border: 1px solid rgba(241, 210, 127, .55); background: rgba(241, 210, 127, .12);
+}
+/* 칩 둘째 줄: 생각 중… / 놓는 중… / 자동 진행까지 남은 초 */
+.pchip .sub { font-size: 10.5px; font-weight: 600; line-height: 1.25; opacity: .85; white-space: nowrap; }
+.pchip .dots i { font-style: normal; animation: dot 1.2s infinite; }
+.pchip .dots i:nth-child(2) { animation-delay: .2s; } .pchip .dots i:nth-child(3) { animation-delay: .4s; }
+@keyframes dot { 0%, 80%, 100% { opacity: .2; } 40% { opacity: 1; } }
+/* 2장 이하: 와인색 후광이 천천히 숨 쉼 */
+.pchip.danger { box-shadow: 0 0 0 2px #c2405a, 0 0 12px 2px rgba(194, 64, 90, .6); animation: halo 1.5s ease-in-out infinite; }
+.pchip.turn.danger { box-shadow: 0 0 0 2px #c2405a, 0 0 14px rgba(241, 210, 127, .5); }
+.pchip.danger .cnt { background: #8e1b2e; color: #fff; font-weight: 800; }
+@keyframes halo { 50% { box-shadow: 0 0 0 2px #c2405a, 0 0 18px 5px rgba(194, 64, 90, .35); } }
+/* 연결 끊김: 칩 글씨만 흐리게, 📵와 자동 진행 안내는 또렷하게 */
+.pchip.off { opacity: 1; }
+.pchip.off > :not(.offi):not(.sub):not(.plus1) { opacity: .62; }        /* 흐리게, 그래도 읽히게 (명암비 4.5:1 이상) */
+.pchip.turn.off > :not(.offi):not(.sub):not(.plus1) { opacity: .85; }   /* 금빛 차례 칩 위의 어두운 글씨는 덜 흐리게 */
+/* 📵는 칩 모서리 배지로 (칩이 세 줄로 커져 테이블이 아래로 밀리지 않게) */
+.pchip .offi { position: absolute; top: -8px; left: -6px; z-index: 1; font-size: 12px; line-height: 1; }
+/* 뽑기: 칩 위로 +1 */
+.pchip .plus1 {
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%); z-index: 2;
+  font: 800 12px/1 Arial, sans-serif; color: var(--gold-hi);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .6); pointer-events: none; animation: plus1 .9s ease-out both;
+}
+@keyframes plus1 { 0% { opacity: 0; transform: translate(-50%, 6px); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -8px); } }
+@media (max-width: 420px) {
+  .players { row-gap: 7px; }
+  .pchip .l1 { column-gap: 3px; }
+  .pchip .nm { max-width: 6em; }
+  .pchip .cnt { margin-left: 0; }
+  /* 좁은 화면: '다음'·📵은 칩 모서리 배지로 (칩 폭을 늘리지 않아 4명이 두 줄에 들어가게) */
+  .pchip .nx { position: absolute; top: -8px; right: -4px; z-index: 1; font-size: 9.5px; line-height: 13px; padding: 0 4px; background: #1a2546; }
+}
+@media (min-width: 1000px) { .pchip .nm { max-width: 13em; } }   /* 넓은 화면: 긴 이름도 거의 다 (전체 이름은 칩 위에 마우스를 올리면) */
+.controls button { min-height: 44px; }
+/* 게임 중 알림은 받침(버튼·손패) 바로 위에 — 손패가 두 줄 이상이어도 버튼 글씨를 가리지 않게 (--dock-h는 app.js가 잼) */
+body:has(#game:not(.hidden)) .toast { bottom: calc(var(--dock-h, 140px) + 10px); }
+.status { word-break: keep-all; }   /* 큰 글씨에서 '뽑으세/요'처럼 낱글자가 떨어지지 않게 */
+@media (max-width: 379px) {
+  .pchip .pre .w { display: none; }
+  .pchip .pre .o { display: inline-block; }
+  /* 360px에서도 받침 버튼 한 줄 (누르는 크기 44px 유지) */
+  .dock { padding-left: 6px; padding-right: 6px; }
+  .controls { gap: 4px; }
+  .controls button.ic { padding-left: 6px; padding-right: 6px; }
+  #btnReset .lb { display: none; }
+  #btnDone { padding-left: 6px; padding-right: 6px; }
+}
+@media (max-width: 350px) {   /* 더 좁은 폰: '한 수' 글자도 아이콘으로 */
+  #btnUndo span { display: none; }
+  #btnSortNum, #btnSortColor, #btnReset { min-width: 40px; padding-left: 4px; padding-right: 4px; }
+}
+
+/* 마우스: 누를 수 있는 것에 살짝 반응 (터치 화면에는 없음) */
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled):hover { filter: brightness(1.05); }
+  body:not(.calm) .table.mine .tile:not(.sel):hover, body:not(.calm) #rack .tile[draggable="true"]:not(.sel):hover { transform: translateY(-2px); }
+}
+
+/* 효과 줄이기(body.calm) · 운영체제 '동작 줄이기': 움직임은 모두 끄고 빛·색만 남김 */
+body.calm .set.justfit, body.calm .set.oops.shake, body.calm .status.nudge, body.calm .set.rv.sweep,
+body.calm .tile.fadein, body.calm .tile.shimmer, body.calm .rv-layer, body.calm .dock.glow,
+body.calm .pchip.danger, body.calm .pchip .dots i, body.calm .pchip .plus1 { animation: none; }
+body.calm .rv-shaft { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .set.justfit, .set.oops.shake, .status.nudge, .set.rv.sweep, .tile.fadein, .tile.shimmer,
+  .rv-layer, .dock.glow, .pchip.danger, .pchip .dots i, .pchip .plus1 { animation: none; }
+  .rv-shaft { display: none; }
+}
