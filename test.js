@@ -14,6 +14,20 @@ ok('타일 해석', () => {
   assert.deepStrictEqual(R.tile(T(2, 7, 1)), { id: T(2, 7, 1), joker: false, color: 2, num: 7 });
   assert.ok(R.tile(J2).joker);
 });
+ok('5~6인 확장: 숫자 3벌·조커 4개, 기존 106개 ID 보존', () => {
+  assert.strictEqual(R.MAX_PLAYERS, 6);
+  assert.deepStrictEqual([2,3,4,5,6].map(R.deckSize), [106,106,106,160,160]);
+  const all = Array.from({length:R.TILE_COUNT}, (_,i)=>R.tile(i));
+  assert.strictEqual(all.filter(t=>t.joker).length, 4);
+  for (let c=0;c<4;c++) for (let n=1;n<=13;n++)
+    assert.strictEqual(all.filter(t=>!t.joker && t.color===c && t.num===n).length, 3);
+  assert.deepStrictEqual(R.tile(106), {id:106,joker:false,color:0,num:1});
+  assert.deepStrictEqual(R.tile(157), {id:157,joker:false,color:3,num:13});
+  assert.strictEqual(R.penalty([106,157,158,159]), 74);
+  assert.ok(R.analyze([157,104,158,159]).ok, '실제 타일 1개와 조커 3개');
+  assert.ok(!R.checkPlay([], [106,107,108], [[106,107,108],[106,107,108]], true).ok, '확장 타일도 중복 사용 금지');
+  assert.strictEqual(R.checkPlay([], [T(0,1),T(0,2),T(0,3)], [[106,107,108]], true).code, 'notYours');
+});
 ok('그룹', () => {
   assert.strictEqual(R.analyze([T(0, 5), T(1, 5), T(3, 5)]).value, 15);
   assert.ok(!R.analyze([T(0, 5), T(0, 5, 1), T(3, 5)]).ok, '같은 색 중복 불가');
@@ -393,10 +407,13 @@ ok('쉬움: 조커 안 씀·묶음은 한 턴에 하나', () => {
 });
 // levels: 각 판의 참가자 난이도. 이긴 자리 번호를 돌려줌
 function selfPlay(levels) {
-  const pool = Array.from({ length: 106 }, (_, i) => i).sort(() => Math.random() - 0.5);
+  const pool = Array.from({ length: R.deckSize(levels.length) }, (_, i) => i).sort(() => Math.random() - 0.5);
   const ps = levels.map(level => ({ level, rack: pool.splice(0, 14), melded: false }));
   let table = [], turn = 0, passes = 0;
   for (let step = 0; step < 3000; step++) {
+    const all=pool.concat(table.flat(),ps.flatMap(p=>p.rack));
+    assert.strictEqual(all.length,R.deckSize(levels.length));
+    assert.strictEqual(new Set(all).size,all.length,'타일이 사라지거나 중복되지 않음');
     const p = ps[turn];
     const plan = Bot.plan(table, p.rack, p.melded, p.level);
     if (plan) {
@@ -416,6 +433,21 @@ function selfPlay(levels) {
 ok('쉬움·어려움 섞어 40판: 모든 수가 규칙 통과, 모든 판이 끝남', () => {
   const combos = [['easy', 'hard'], ['hard', 'hard', 'easy'], ['easy', 'easy', 'hard', 'hard'], ['hard', 'hard', 'hard', 'hard']];
   for (let g = 0; g < 40; g++) selfPlay(combos[g % combos.length]);
+});
+ok('확장 어려움: 세 번째 벌을 보존하며 새 조커로 재배치', () => {
+  const third=c=>106+c*13+12;
+  const table=[0,1].map(k=>[0,1,2,3].map(c=>T(c,13,k))).concat([[0,1,2,3].map(third)]);
+  const hand=[158,159];
+  const move=Bot.plan(table,hand,true,'hard');
+  const result=R.checkPlay(table,hand,move,true);
+  assert.ok(result.ok,result.reason);
+  assert.strictEqual(result.played.length,2,'조커 두 개를 모두 사용해 승리');
+  const fourJ=[157,104,105,158,159];
+  const initial=Bot.plan([],fourJ,false,'hard');
+  assert.ok(initial && R.checkPlay([],fourJ,initial,false).ok,'조커 4개를 포함한 첫 등록');
+});
+ok('확장판 5~6인 봇 12판: 타일 보존·합법 수·종료', () => {
+  for (let g=0;g<12;g++) selfPlay(Array.from({length:5+g%2},(_,i)=>i%2?'hard':'easy'));
 });
 ok('어려움이 쉬움보다 확실히 강함 (1:1 30판)', () => {
   let hardWins = 0;
@@ -511,12 +543,62 @@ async function integration() {
     ok('GET /api/info (같은 와이파이 주소)·QR 만들기', () => {});
   }
 
+  {
+    const practice = await post('create', { name: '연습', mode: 'practice' });
+    await listen(practice);
+    await until(() => practice.state);
+    assert.strictEqual(practice.state.mode, 'practice');
+    assert.strictEqual(practice.state.state, 'lobby', '연습도 준비 후에만 시작');
+    assert.strictEqual(practice.state.settings.timer, 0);
+    const guest = await post('join', { room: practice.room, name: '친구' });
+    await listen(guest);
+    await until(() => guest.state);
+    assert.strictEqual(guest.state.mode, 'practice', '참가자·재접속에도 준비 모드 유지');
+    await post('leave', { room: practice.room, token: guest.token });
+    guest.close();
+    await post('leave', { room: practice.room, token: practice.token });
+    practice.close();
+    ok('연습 준비 모드·시간 제한 없음·참가자에게 모드 전달', () => {});
+  }
+  for (const seats of [5,6]) {
+    const host = await post('create', { name: '확장 방장' });
+    const people = [host];
+    for (let i=1;i<seats;i++) people.push(await post('join', {room:host.room,name:'참가자'+i}));
+    assert.ok(people.every(p=>p.status===200));
+    if (seats===6) {
+      failed(await post('join', {room:host.room,name:'일곱째'}), 'roomFull');
+      failed(await post('addBot', {room:host.room,token:host.token,level:'hard'}), 'roomFull', {}, '방이 가득 찼어요 (최대 6명)');
+    }
+    await listen(host);
+    await post('start', {room:host.room,token:host.token});
+    await until(()=>host.state && host.state.state==='playing');
+    assert.strictEqual(host.state.deckSize,160);
+    assert.strictEqual(host.state.maxPlayers,6);
+    assert.strictEqual(host.state.pool,160-seats*14);
+    assert.ok(host.state.players.every(p=>p.count===14 && !('rack' in p) && !('token' in p)));
+    const room=rooms.get(host.room);
+    const all=room.pool.concat(room.players.flatMap(p=>p.rack));
+    assert.strictEqual(all.length,160);
+    assert.strictEqual(new Set(all).size,160);
+    const seen=new Set();
+    for(let i=0;i<seats;i++) {
+      const id=host.state.turnId; seen.add(id);
+      const p=room.players.find(p=>p.id===id);
+      assert.strictEqual((await post('draw',{room:host.room,token:p.token})).status,200);
+      await until(()=>host.state.turnId!==id);
+    }
+    assert.strictEqual(seen.size,seats,'끝자리까지 차례가 한 번씩 돌아옴');
+    for(const p of people) await post('leave',{room:host.room,token:p.token});
+    host.close();
+    ok(`${seats}명 온라인: 확장 160개·각 14개·차례 순환·손패 비공개`,()=>{});
+  }
   const a = await post('create', { name: '앨리스' });
   const b = await post('join', { room: a.room.toLowerCase(), name: '<b>밥</b>' });
   assert.strictEqual(b.status, 200);
   failed(await post('join', { room: 'ZZZZ', name: 'x' }), 'badCode', {}, '방 코드를 확인해 주세요');
   await listen(a); await listen(b);
   await until(() => a.state && a.state.players.length === 2 && a.state.players.every(p => p.connected));
+  assert.strictEqual(a.state.mode, 'friends', '기본은 친구 대기실');
   assert.ok(!a.state.players[1].name.includes('<'), '이름 태그 제거');
   ok('방 만들기·참가·실시간 상태', () => {});
   {
@@ -769,10 +851,28 @@ async function integration() {
     ok('봇 작업 스레드가 어려움 전략으로 계산', () => {});
   }
   BOT.think = 5; BOT.show = 5; BOT.chat = 5;
+  {
+    const six=await post('create',{name:'6인 연습'});
+    for(const level of ['easy','hard','easy','hard','easy']) await post('addBot',{room:six.room,token:six.token,level});
+    await listen(six);
+    await until(()=>six.state && six.state.players.length===6);
+    await post('start',{room:six.room,token:six.token});
+    await until(()=>six.state.state==='playing');
+    for(let i=0;i<5000 && six.state.state!=='ended';i++) {
+      if(six.state.turnId===six.state.me.id) await post('draw',{room:six.room,token:six.token});
+      await new Promise(r=>setTimeout(r,5));
+    }
+    assert.strictEqual(six.state.state,'ended','6인 봇 서버 게임 종료');
+    assert.strictEqual(six.state.result.length,6);
+    assert.strictEqual(six.state.awards.length,6);
+    assert.strictEqual(six.state.deckSize,160);
+    await post('leave',{room:six.room,token:six.token}); six.close();
+    assert.ok(!rooms.has(six.room));
+    ok('5명 봇+사람: 작업 스레드로 실제 6인 판 종료·결과·시상·방 정리',()=>{});
+  }
   const h = await post('create', { name: '혼자' });
   failed(await post('start', { room: h.room, token: h.token }), 'needTwo', {}, '2명 이상이어야 시작할 수 있어요');
   for (const level of ['easy', 'hard', 'hard']) assert.strictEqual((await post('addBot', { room: h.room, token: h.token, level })).status, 200);
-  failed(await post('addBot', { room: h.room, token: h.token }), 'roomFull', {}, '방이 가득 찼어요 (최대 4명)');
   await listen(h);
   await until(() => h.state && h.state.players.length === 4 && h.state.players.filter(p => p.bot).length === 3);
   await until(() => (h.chat || []).filter(m => m.bot).length === 3);

@@ -3,13 +3,17 @@
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.RummiRules = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
-  const TILE_COUNT = 106;          // 4색 × 1~13 × 2벌 + 조커 2
+  const STANDARD_TILE_COUNT = 106;
+  const TILE_COUNT = 160;          // 확장: 3벌 + 조커 4 (기존 0~105 ID는 그대로)
+  const MAX_PLAYERS = 6;
+  const deckSize = players => players >= 5 ? TILE_COUNT : STANDARD_TILE_COUNT;
   const JOKER_PENALTY = 30;
   const INITIAL_MELD = 30;
   const COLOR_NAMES = ['빨강', '파랑', '주황', '검정'];
 
   function tile(id) {
-    if (id >= 104) return { id, joker: true, color: -1, num: 0 };
+    if (id === 104 || id === 105 || id >= 158) return { id, joker: true, color: -1, num: 0 };
+    if (id >= 106) return { id, joker: false, color: Math.floor((id - 106) / 13), num: (id - 106) % 13 + 1 };
     return { id, joker: false, color: Math.floor(id / 26), num: (Math.floor(id / 2) % 13) + 1 };
   }
 
@@ -176,8 +180,8 @@
   }
 
   function penalty(rack) {
-    return rack.reduce((sum, id) => sum + (id >= 104 ? JOKER_PENALTY : tile(id).num), 0);
+    return rack.reduce((sum, id) => sum + (tile(id).joker ? JOKER_PENALTY : tile(id).num), 0);
   }
 
-  return { TILE_COUNT, JOKER_PENALTY, INITIAL_MELD, COLOR_NAMES, tile, analyze, checkPlay, penalty, setKey, explain, explainCode, tableDiff };
+  return { TILE_COUNT, STANDARD_TILE_COUNT, MAX_PLAYERS, deckSize, JOKER_PENALTY, INITIAL_MELD, COLOR_NAMES, tile, analyze, checkPlay, penalty, setKey, explain, explainCode, tableDiff };
 });

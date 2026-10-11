@@ -19,7 +19,7 @@ let chat = [], chatOpen = false, chatSeen = 0, bubbleTimer;   // 채팅 기록 /
 // ---------- 말 (i18n.js) — 서버는 코드+값만, 글자는 보는 사람의 말로. 코드가 없으면 서버가 준 한국어 그대로 ----------
 const tx = (k, p) => (window.I18N ? I18N.t(k, p) : k);
 const levelName = l => (l === 'easy' || l === 'hard' ? tx('level.' + l) : '');
-const BOT_KEYS = { '로봇 루미': 'rumi', '로봇 큐브': 'cube', '로봇 타일': 'tile', '로봇 조커': 'joker', '로봇': 'robot' };   // 옛 서버(botKey 없음)용
+const BOT_KEYS = { '로봇 루미': 'rumi', '로봇 큐브': 'cube', '로봇 타일': 'tile', '로봇 조커': 'joker', '로봇': 'robot', '로봇 평화': 'peace' };   // 옛 서버(botKey 없음)용
 const isSelfName = n => n === '나' || n === 'Me';   // 이름 없이 혼자 연습할 때 쓰는 이름
 function botKeyOf(x) {
   if (!x) return null;
@@ -170,8 +170,6 @@ let chipPulse = null;       // { id, at } 뽑은 사람 칩 위 +1
 let shownIds = new Set();   // 남의 미리보기에서 이미 보여 준 타일 (새로 나타난 것만 서서히)
 let graceAt = null;         // { id, until } 연결 끊긴 사람 차례가 자동으로 넘어가는 시각
 let RV = null;              // 진행 중인 턴 확정 연출
-let drawSoundAt = 0;
-function drawSound() { if (Date.now() - drawSoundAt > 1500) { drawSoundAt = Date.now(); sfx('draw'); } }
 const newWork = () => ({
   seq: S.turnSeq, table: S.table.map(x => x.slice()), sel: new Set(),
   hist: [],                                   // 한 수 취소용 (최대 60)
@@ -212,7 +210,7 @@ function whatChanged(a, b) {
     drew: false, firstMeld: false, jokerPlayed: false, wentOut: false, meldValue: 0 };
   if (!d.added.length && !d.removed) { c.placed = []; c.drew = !!pb && pb.count > pa.count; return c; }
   c.firstMeld = !!pb && !pa.melded && pb.melded;
-  c.jokerPlayed = d.placed.some(id => id >= 104);
+  c.jokerPlayed = d.placed.some(id => R.tile(id).joker);
   c.wentOut = b.state === 'ended' && !!pb && pb.count === 0;
   if (c.firstMeld) c.meldValue = d.added.reduce((s, i) => { const x = R.analyze(b.table[i]); return s + (x.ok ? x.value : 0); }, 0);
   return c;
@@ -228,10 +226,46 @@ function startReveal(c) {
 }
 function revealLayer(cls, rect, text) {
   const L = el('div', 'rv-layer ' + cls, text);
-  if (/rv-shaft|rv-burst/.test(cls)) Object.assign(L.style, { left: rect.left + 'px', top: rect.top + 'px', width: rect.width + 'px', height: rect.height + 'px' });
+  if (/rv-shaft|rv-burst|rv-stage/.test(cls)) Object.assign(L.style, { left: rect.left + 'px', top: rect.top + 'px', width: rect.width + 'px', height: rect.height + 'px' });
   document.body.append(L);
   RV.layers.push(L);
   return L;
+}
+function revealCallout(c, rect, calm) {
+  const kind = c.wentOut ? 'win' : c.touchedOld >= 3 ? 'rebuild' : c.placed.length >= 6 ? 'big' : 'first';
+  const b = revealLayer('rv-banner cinematic rv-' + kind, rect);
+  b.lang = I18N.lang;
+  b.setAttribute('role', 'status');
+  if (rect.height < 180 || innerHeight <= 430) b.classList.add('compact');
+  if (rect.height < 96) b.classList.add('tiny');
+  const plate = el('span', 'rv-plaque');
+  plate.setAttribute('aria-hidden', 'true');
+  const words = el('div', 'rv-words');
+  const kicker = el('div', 'rv-kicker');
+  kicker.append(el('span', 'rv-seal', tx('reveal.tag.' + kind)), el('span', 'rv-actor', c.me ? tx('reveal.me') : c.name));
+  const title = el('div', 'rv-title');
+  if (kind === 'big') {
+    // Split the localized sentence around a marker, without interpreting HTML or player names.
+    const [before, after] = tx('reveal.big', { n: '\uFFFC' }).split('\uFFFC');
+    title.append(document.createTextNode(before), el('em', 'rv-number', String(c.placed.length)), document.createTextNode(after || ''));
+  } else title.textContent = tx('reveal.title.' + kind);
+  let detail = '';
+  if (c.firstMeld) detail = tx(kind === 'first' ? 'reveal.firstDetail' : 'reveal.firstMeldMe', { v: c.meldValue });
+  else if (kind === 'rebuild') detail = tx('reveal.rebuildDetail', { n: c.touchedOld });
+  else if (kind === 'win') detail = tx('reveal.winDetail');
+  words.append(kicker, title);
+  if (detail) words.append(el('small', 'rv-detail', detail));
+  b.append(plate, words);
+  b.style.top = Math.round(Math.max(rect.top + 4, rect.bottom - b.offsetHeight - (b.classList.contains('tiny') ? 4 : 14))) + 'px';
+  if (!calm) {
+    const stage = revealLayer('rv-stage', rect);
+    stage.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < 8; i++) {
+      const ray = el('i', 'rv-ray');
+      ray.style.setProperty('--i', i);
+      stage.append(ray);
+    }
+  }
 }
 // 새로 생기거나 바뀐 묶음이 테이블 순서대로 140ms 간격으로 빛나며 음이 올라감 (전체 1.5초 안, 아무 데나 누르면 건너뜀)
 function runReveal() {
@@ -254,16 +288,7 @@ function runReveal() {
   let count = 0;
   if (r.tier === 3 && !calm) revealLayer('rv-shaft', rect);
   if (r.tier === 3 && window.Sfx) Sfx.buzz('big');
-  const lines = [];
-  if (c.firstMeld) lines.push(c.me ? tx('reveal.firstMeldMe', { v: c.meldValue }) : tx('reveal.firstMeld', { name: c.name, v: c.meldValue }));
-  if (r.tier === 3) lines.push(c.touchedOld >= 3 ? tx('reveal.rebuild', { n: c.touchedOld }) : tx('reveal.big', { n: c.placed.length }));
-  if (lines.length && r.tier >= 2) {
-    at(Math.min(step, 160), () => {
-      const b = revealLayer('rv-banner', rect, lines[0]);
-      if (lines[1]) b.append(el('small', '', lines[1]));
-      b.style.top = Math.round(Math.max(rect.top + 8, rect.bottom - b.offsetHeight - 14)) + 'px';
-    });
-  }
+  if (c.firstMeld || r.tier >= 3) at(Math.min(step, 160), () => revealCallout(c, rect, calm));
   c.added.forEach((idx, i) => at(i * step, () => {
     r.lit.add(idx); r.litAt[idx] = Date.now();
     const d = document.querySelector(`#table .set[data-set="${idx}"]`);
@@ -271,8 +296,9 @@ function runReveal() {
     const ids = tableNow[idx] || [];
     count += ids.filter(id => placed.has(id)).length;
     chip.textContent = tx('reveal.chip', { n: count, who });
-    const joker = ids.some(id => id >= 104 && placed.has(id));
-    if (joker) ids.forEach(id => { if (id >= 104 && placed.has(id)) r.shimmer.add(id); });
+    const joker = ids.some(id => R.tile(id).joker && placed.has(id));
+    if(d && window.TableFeel)TableFeel.confirm(d,{big:r.tier>=3,joker});
+    if (joker) ids.forEach(id => { if (R.tile(id).joker && placed.has(id)) r.shimmer.add(id); });
     if (joker && d) d.querySelectorAll('.tile.joker').forEach(t => { if (r.shimmer.has(Number(t.dataset.id))) t.classList.add('shimmer'); });
     sfx(joker ? 'joker' : 'commit', { step: i + 1 });
   }));
@@ -281,7 +307,7 @@ function runReveal() {
     at(lightsEnd + 80, () => { if (!calm) revealLayer('rv-burst', rect); else revealLayer('rv-burst calmburst', rect); sfx('win'); });
     at(lightsEnd + 80 + 1200, () => finishReveal(true));
   } else {
-    at(Math.min(1500, Math.max(900, lightsEnd + 520)), () => finishReveal(true));
+    at(Math.min(1500, Math.max(r.tier >= 3 || c.firstMeld ? 1250 : 900, lightsEnd + 520)), () => finishReveal(true));
   }
   document.addEventListener('pointerdown', skipReveal, true);
   document.addEventListener('keydown', skipReveal, true);
@@ -293,9 +319,19 @@ function skipReveal() {
   document.querySelectorAll('#table .set.rv').forEach(d => d.classList.remove('rv', 'sweep'));
   document.querySelectorAll('#table .tile.shimmer').forEach(t => t.classList.remove('shimmer'));
 }
+function cancelRevealForLayout() {
+  skipReveal();
+  // Also remove outgoing banners still in their short fade after a skip.
+  document.querySelectorAll('.rv-layer').forEach(L => L.remove());
+}
+window.addEventListener('resize', cancelRevealForLayout);
+document.addEventListener('visibilitychange', () => { if (document.hidden) cancelRevealForLayout(); });
+const revealMotionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+revealMotionQuery.addEventListener('change', cancelRevealForLayout);
 function finishReveal(doRender) {
   const r = RV;
   if (!r) return;
+  if(window.TableFeel)TableFeel.clear();
   RV = null;
   r.timers.forEach(clearTimeout);
   document.removeEventListener('pointerdown', skipReveal, true);
@@ -324,6 +360,15 @@ const meName = () => (S.players.find(p => p.id === S.me.id) || {}).name;
 function onState(s) {
   skew = s.now - Date.now();
   const prevS = S;
+  // The server echoes draft previews to their author, too. An unchanged view must
+  // not rebuild the board halfway through a local tile flight or replay rewards.
+  if(prevS && s.state==='playing' && s.turnId===s.me.id && prevS.turnId===s.turnId) {
+    const {now:oldNow,preview:oldPreview,...oldView}=prevS;
+    const {now:newNow,preview:newPreview,...newView}=s;
+    if(JSON.stringify(oldView)===JSON.stringify(newView)) {
+      S=s;tick();if(window.UX)UX.sync();return;
+    }
+  }
   const firstState = !S;
   const newRound = !S || S.round !== s.round;
   const prevRack = new Set(S && !newRound ? S.me.rack : []);
@@ -351,13 +396,14 @@ function onState(s) {
   if (!isMyTurn()) W = null;
   if (change && change.drew) {
     chipPulse = { id: change.actor, at: Date.now() };
-    if (change.me) drawSound(); else sfx('draw', { quiet: true, buzz: false });
+    if (change.me) sfx('draw'); else sfx('draw', { quiet: true, buzz: false });
   }
   watchSeats(firstState);
   const cur = S.state === 'playing' && S.players.find(p => p.id === S.turnId);
   graceAt = cur && !cur.connected && !S.deadline && Number.isFinite(cur.graceLeft) ? { id: cur.id, until: Date.now() + cur.graceLeft * 1000 } : null;
   if (firstState) renderChat();   // 내 메시지 표시(오른쪽 정렬)는 내 id를 안 다음에야 가능
   render();
+  if(change && change.me && change.drew && newDraw.size && S.state==='playing' && window.TableFeel)TableFeel.draw([...newDraw]);
   if (RV && !RV.started) runReveal();
 }
 
@@ -529,43 +575,76 @@ document.addEventListener('keydown', e => {
   openChat(false, true);
 });
 
+let lobbyRequest = false;
+let practiceInviteOpen = false, practiceInviteRoom = '';
+// 상대 설정과 시작을 함께 잠가, 추가 도중 게임이 먼저 시작되지 않게 합니다.
+async function editLobby(action, payload = {}) {
+  if (lobbyRequest || !S || S.state !== 'lobby') return;
+  lobbyRequest = true;
+  renderLobby();
+  try { await api(action, payload); }
+  catch (err) { toast(err.message); }
+  finally {
+    lobbyRequest = false;
+    if (S && S.state === 'lobby') renderLobby();
+  }
+}
 function renderLobby() {
   show('lobby');
+  const practice = S.mode === 'practice';
+  if (practiceInviteRoom !== S.code) { practiceInviteOpen = false; practiceInviteRoom = S.code; }
+  $('#lobby').classList.toggle('practice-lobby', practice);
+  $('#lobbyInvitePanel').classList.toggle('hidden', practice && !practiceInviteOpen);
+  $('#btnPracticeInvite').classList.toggle('hidden', !practice);
+  $('#btnPracticeInvite').setAttribute('aria-expanded', String(practiceInviteOpen));
+  $('#btnPracticeInvite').textContent = tx(practiceInviteOpen ? 'lobby.inviteHide' : 'lobby.inviteShow');
+  $('#lobbyTitle').textContent = tx(practice ? 'lobby.practiceTitle' : 'lobby.friendsTitle');
+  $('#lobbySubtitle').textContent = tx(practice ? 'lobby.practiceSub' : 'lobby.friendsSub');
+  $('#botSetup').setAttribute('aria-busy', String(lobbyRequest));
   $('#lobbyCode').textContent = S.code;
-  $('#lobbyCount').textContent = `(${S.players.length}/4)`;
+  const capacity = S.maxPlayers || R.MAX_PLAYERS;
+  $('#lobbyCount').textContent = `(${S.players.length}/${capacity})`;
+  $('#lobbyDeck').textContent = tx((S.deckSize || R.deckSize(S.players.length)) > R.STANDARD_TILE_COUNT ? 'lobby.deckExpanded' : 'lobby.deckStandard');
   const ul = $('#lobbyPlayers'); ul.replaceChildren();
   for (const p of S.players) {
     const li = el('li', p.connected ? '' : 'off');
-    li.append(el('span', '', (p.bot ? '🤖 ' : '') + displayName(p)));
+    li.append(el('span', 'player-name', (p.bot ? '🤖 ' : '') + displayName(p)));
     if (p.id === S.hostId) li.append(el('span', 'tag', tx('lobby.host')));
     if (p.id === S.me.id && !isSelfName(p.name)) li.append(el('span', 'muted', tx('me.tag')));
     li.append(el('span', 'grow'));
     if (p.bot) {
       const lv = el('button', 'lv ' + p.level, levelName(p.level));
+      lv.setAttribute('aria-label', tx('lobby.levelAria', { name: displayName(p), level: levelName(p.level) }));
       if (S.hostId === S.me.id) {
         lv.title = tx('lobby.lvTitle');
-        lv.onclick = () => api('setBotLevel', { botId: p.id, level: p.level === 'hard' ? 'easy' : 'hard' }).catch(err => toast(err.message));
+        lv.disabled = lobbyRequest;
+        lv.onclick = () => editLobby('setBotLevel', { botId: p.id, level: p.level === 'hard' ? 'easy' : 'hard' });
       } else lv.disabled = true;
       li.append(lv);
     }
     if (p.bot && S.hostId === S.me.id) {
       const x = el('button', 'x', '✕'); x.title = tx('lobby.removeBot'); x.setAttribute('aria-label', `${tx('lobby.removeBot')}: ${displayName(p)}`);
-      x.onclick = () => api('removeBot', { botId: p.id }).catch(err => toast(err.message));
+      x.disabled = lobbyRequest;
+      x.onclick = () => editLobby('removeBot', { botId: p.id });
       li.append(x);
     }
     ul.append(li);
   }
   const host = S.hostId === S.me.id;
+  const slots = Math.max(0, capacity - S.players.length);
+  $('#botSummary').textContent = tx('lobby.botCount', { n: S.players.filter(p => p.bot).length });
+  $('#botSetupHint').textContent = tx(!host ? 'lobby.botHostOnly' : slots ? 'lobby.botHelp' : 'lobby.botFull', { n: slots });
   for (const b of ['#btnAddEasy', '#btnAddHard']) {
     const btn = $(b);
     if (!btn) continue;
     btn.classList.toggle('hidden', !host);
-    btn.disabled = S.players.length >= 4;
+    btn.disabled = !slots || lobbyRequest;
   }
   $('#timer').value = String(S.settings.timer);
-  $('#timer').disabled = !host;
+  $('#timer').disabled = !host || lobbyRequest;
   $('#btnStart').classList.toggle('hidden', !host);
-  $('#btnStart').disabled = S.players.length < 2;
+  $('#btnStart').disabled = S.players.length < 2 || lobbyRequest;
+  $('#btnStart').setAttribute('aria-busy', String(lobbyRequest));
   $('#lobbyHint').textContent = tx(host ? (S.players.length < 2 ? 'lobby.hintFew' : 'lobby.hintReady') : 'lobby.hintWait');
   lobbyInvite();   // QR·같은 와이파이 주소 (flow.js)
   if (window.UX) UX.sync();
@@ -639,6 +718,7 @@ function renderGame() {
   // 상단 자리표: 이름 · 남은 장수 · 첫 등록 전 · 다음 차례 · 생각 중 · 연결 끊김
   const pl = $('#players'); pl.replaceChildren();
   pl.classList.toggle('p4', S.players.length >= 4);
+  pl.classList.toggle('p6', S.players.length >= 5);
   const nextId = nextSeatId();
   for (const p of S.players) {
     const turn = p.id === S.turnId;
@@ -716,6 +796,7 @@ function renderGame() {
     const d = el('div', cls);
     if (ago < 600) d.style.animationDelay = -ago + 'ms';
     d.dataset.set = i;
+    if(a.ok)d.dataset.kind=a.kind;
     if (hasSel) { if (kb) d.tabIndex = 0; d.setAttribute('role', 'button'); d.setAttribute('aria-label', tx('a11y.placeSet', { n: i + 1, tiles: set.map(tileLabel).join(', ') })); }
     const row = mine && !a.ok ? el('div', 'tiles') : d;   // 만드는 중인 묶음: 타일 줄 아래에 이유 한 줄
     if (row !== d) d.append(row);
@@ -747,9 +828,7 @@ function renderGame() {
   if (mine && !S.me.melded && !W.meldReady && meldReady(info)) { W.meldReady = true; meldNow = true; }
   if (justfit.length) {
     justfit.forEach(d => d.classList.add('justfit'));
-    if (!meldNow) sfx('valid', { step: [...info.changed].filter(i => R.analyze(W.table[i]).ok).length });
   }
-  if (meldNow) sfx('firstMeld');
   if (mine) {
     const n = el('div', 'set newset' + (hasSel ? ' target' : ''), tx(hasSel ? 'table.newSet' : 'table.pickHere'));
     n.dataset.set = 'new';
@@ -821,7 +900,11 @@ function renderGame() {
   $('#table').scrollLeft = tableScroll.left;
   $('#rack').scrollTop = rackScroll;
   $('#table').querySelectorAll('.set').forEach(d => { const x = setScroll.get(tileKey(d)); if (x) d.scrollLeft = x; });
-  if (motionBefore) TileMotion.after(motionBefore);
+  const settled=motionBefore ? TileMotion.after(motionBefore) : null;
+  if(justfit.length || meldNow) {
+    const sound=meldNow?'firstMeld':'valid',step=info?[...info.changed].filter(i=>R.analyze(W.table[i]).ok).length:0;
+    if(window.TableFeel)TableFeel.complete(justfit,{settled,sound,step});else sfx(sound,{step});
+  }
   if (window.UX) UX.sync();
 }
 
@@ -920,7 +1003,8 @@ function moveSelected(target) {
     W.hist.push(before);
     if (W.hist.length > 60) W.hist.shift();
     W.oops = null;
-    sfx(target === 'rack' ? 'back' : 'place');
+    sfx(target === 'rack' ? 'back' : isCalm() ? 'settle' : 'place',target === 'rack' ? undefined : {buzz:false,quiet:isCalm()});
+    if(target!=='rack' && isCalm() && window.Sfx)Sfx.buzz('place');
   }
   sendPreview();
   render();
@@ -965,7 +1049,9 @@ $('#game').addEventListener('click', e => {
     const id = Number(tile.dataset.id);
     W.sel.has(id) ? W.sel.delete(id) : W.sel.add(id);
     sfx('pick');
-    return render();
+    const selected=W.sel.has(id);render();
+    if(window.TableFeel)TableFeel.pick(document.querySelector(`#game .tile[data-id="${id}"]`),selected);
+    return;
   }
   if (set && W.sel.size) return moveSelected(set.dataset.set === 'new' ? 'new' : Number(set.dataset.set));
   if (rack && W.sel.size) return moveSelected('rack');
@@ -1071,13 +1157,14 @@ async function share() {
   else toast(url);
 }
 $('#btnShare').onclick = share;
+$('#btnPracticeInvite').onclick = () => { practiceInviteOpen = !practiceInviteOpen; renderLobby(); };
 for (const [sel, level] of [['#btnAddEasy', 'easy'], ['#btnAddHard', 'hard']]) {
   const btn = $(sel);
-  if (btn) btn.onclick = () => api('addBot', { level }).catch(err => toast(err.message));
+  if (btn) btn.onclick = () => editLobby('addBot', { level });
 }
 $('#btnShare2').onclick = share;
-$('#timer').onchange = e => api('settings', { timer: Number(e.target.value) }).catch(err => toast(err.message));
-const doStart = () => api('start').catch(err => toast(err.message));
+$('#timer').onchange = e => editLobby('settings', { timer: Number(e.target.value) });
+const doStart = () => S && S.state === 'lobby' ? editLobby('start') : api('start').catch(err => toast(err.message));
 $('#btnStart').onclick = doStart;
 $('#btnAgain').onclick = doStart;
 const doLeave = async () => {
@@ -1111,10 +1198,12 @@ $('#menu').addEventListener('keydown', e => {
   if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
   else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
 });
-// 조커 모양 — 사람마다 고름 (기본 ✦ 베들레헴의 별). 이 기기에만 저장하고 서버로 보내지 않음 → 다른 사람 화면은 그대로
-const JOKERS = { star: {}, cross: {}, dove: {} };   // 이름은 사전에서 ('joker.star' …)
-let jokerStyle = 'star';
-try { const j = localStorage.getItem('rummi-joker'); if (owns(JOKERS, String(j))) jokerStyle = j; } catch {}
+// 조커 모양 — 기본은 십자가. v1.4.1부터 저장 키를 분리해 기존 기기도 십자가로 시작합니다.
+// 이후 고른 모양은 이 기기에만 저장하고 서버로 보내지 않습니다.
+const JOKERS = { cross: {}, star: {}, dove: {} };   // 이름은 사전에서 ('joker.cross' …)
+const JOKER_STORAGE = 'rummi-joker-v2';
+let jokerStyle = 'cross';
+try { const j = localStorage.getItem(JOKER_STORAGE); if (owns(JOKERS, String(j))) jokerStyle = j; } catch {}
 function applyJoker() {
   document.body.dataset.joker = jokerStyle;
   document.querySelectorAll('svg.jkg:not(.fixed) use').forEach(u => setUseHref(u, jokerStyle));
@@ -1127,7 +1216,7 @@ function applyJoker() {
 function setJoker(j) {
   if (!owns(JOKERS, j)) return;
   jokerStyle = j;
-  try { localStorage.setItem('rummi-joker', j); } catch {}
+  try { localStorage.setItem(JOKER_STORAGE, j); } catch {}
   applyJoker();
 }
 function jokerLabels() {   // 말을 바꾸면 이름만 다시
@@ -1177,6 +1266,7 @@ document.querySelectorAll('[data-pref]').forEach(b => {
     const k = b.dataset.pref;
     prefSaved = Object.assign({}, prefSaved, { [k]: !prefOn(k) });
     try { localStorage.setItem('rummi-prefs', JSON.stringify(prefSaved)); } catch {}
+    if (k === 'calm') cancelRevealForLayout();
     applyPrefs();
     if (S) render();
   };
@@ -1209,9 +1299,20 @@ let turnRequest = false;
 $('#btnDraw').onclick = async () => {
   if (turnRequest || !isMyTurn() || (window.UX && !UX.canSend())) return;
   if (W && R.setKeyTable(W.table) !== R.setKeyTable(S.table) && !confirm(tx('confirm.draw'))) return;
+  const submittedRound=S.round,submittedSeq=S.turnSeq;
   turnRequest = true; if (window.UX) UX.sync();
-  try { await api('draw'); drawSound(); } catch (err) { toast(err.message); }
-  finally { turnRequest = false; if (S) render(); }
+  try { await api('draw'); } catch (err) { toast(err.message); }
+  finally {
+    turnRequest = false;
+    if(S) {
+      // An SSE update may already be animating the drawn tile. Unlock controls
+      // without rebuilding that board when the request's turn has advanced.
+      if(S.round!==submittedRound || S.turnSeq!==submittedSeq) {
+        $('#btnDraw').textContent=tx(S.pool?'game.draw':'game.pass');
+        if(window.UX)UX.sync();
+      } else render();
+    }
+  }
 };
 $('#btnDone').onclick = async () => {
   if (turnRequest || !W || !isMyTurn() || (window.UX && !UX.canSend())) return;
@@ -1252,6 +1353,7 @@ setInterval(tick, 500);
 // ---------- 말 바꾸기 (한국어 | English): 다시 불러오지 않고 그 자리에서 다시 그림 ----------
 // 고정 글자·aria·placeholder는 i18n.js가 [data-i18n…]로 이미 바꿈 → 여기선 코드로 만든 글자만
 if (window.I18N) I18N.on(() => {
+  cancelRevealForLayout();
   buildQuick();
   jokerLabels();
   soundLabel();

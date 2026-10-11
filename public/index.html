@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- 안드로이드 크롬: 키보드가 뜨면 화면 높이를 줄여 채팅 입력칸이 보이게 (Safari는 이 값을 몰라 오류를 남기므로 안드로이드에서만) -->
 <script>try { if (/Android/i.test(navigator.userAgent)) { var vm = document.querySelector('meta[name=viewport]'); vm.content += ', interactive-widget=resizes-content'; } } catch (e) {}</script>
-<meta name="theme-color" content="#16213e">
+<meta name="theme-color" content="#284e40">
 <title>루미큐브 온라인</title>
-<link rel="icon" href="icon.svg">
-<!-- 제목용 명조 글꼴: 인터넷이 없으면(교회 와이파이 등) 화면을 막지 않고 시스템 명조로 대신 -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" media="print" onload="this.media='all'">
+<link rel="icon" href="brand.svg">
+<link rel="preload" href="reveal-display.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="flow.css">
 <link rel="stylesheet" href="polish.css">
+<link rel="stylesheet" href="modern.css">
+<link rel="stylesheet" href="table-feel.css">
+<link rel="stylesheet" href="atelier.css">
 </head>
 <body>
-<!-- 조커 문양 (그림 문자 대신 SVG: 기기마다 똑같이 보이게). 사람마다 고름, 기본은 ✦ 별 -->
+<!-- 조커 문양 (그림 문자 대신 SVG: 기기마다 똑같이 보이게). 기본은 십자가 -->
 <svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
   <defs>
     <linearGradient id="jkGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1d27f"/><stop offset="1" stop-color="#c9972e"/></linearGradient>
@@ -44,25 +44,20 @@
 
 <section id="home" class="screen">
   <aside class="welcome-art" aria-labelledby="welcomeTitle">
-    <span class="edition">THE FELLOWSHIP TABLE · 01</span>
-    <img src="window.svg" alt="" class="welcome-window">
-    <h2 id="welcomeTitle" data-i18n="polish.title">한 수를 놓고,<br>마음을 나누다.</h2>
-    <p data-i18n="polish.sub">작은 타일로 이어지는 좋은 시간.<br>같은 테이블에서, 어디에 있든.</p>
-    <div class="display-tiles" aria-hidden="true"><span class="tile c0">7</span><span class="tile c1">7</span><span class="tile c2">7</span></div>
-    <div class="welcome-foot"><span data-i18n="polish.players">2–4명 · 친구 또는 컴퓨터</span><span data-i18n="polish.devices">PC & 모바일</span></div>
+    <span class="edition"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#jk-cross"/></svg></span> THE FELLOWSHIP TABLE</span>
+    <h2 id="welcomeTitle" data-i18n="polish.title">같이 놓는 즐거움.</h2>
+    <p data-i18n="polish.sub">차근차근 맞추는 재미, 함께 웃는 한 판. 어디서든 같은 테이블에 모여요.</p>
+    <img src="table-scene.svg" alt="" class="table-scene" width="560" height="320">
+    <div class="welcome-foot"><span data-i18n="polish.players">2–6명 · 친구 또는 컴퓨터</span><span data-i18n="polish.devices">PC & 모바일</span></div>
   </aside>
   <div class="card center arch">
-    <div class="logo" aria-hidden="true"><span class="tile c0">1</span><span class="tile c1">2</span><span class="tile c2">3</span><span class="tile joker"><svg class="jkg"><use href="#jk-star" xlink:href="#jk-star"/></svg></span></div>
+    <div class="logo" aria-hidden="true"><span class="tile c0">1</span><span class="tile c1">2</span><span class="tile c2">3</span><span class="tile joker"><svg class="jkg"><use href="#jk-cross" xlink:href="#jk-cross"/></svg></span></div>
     <h1 data-i18n="home.title">루미큐브 온라인</h1>
-    <p class="muted" data-i18n="home.sub">목장·청년부 식구들과 방 코드로 함께하는 타일 게임 (2~4명)</p>
-    <figure class="verse">
-      <blockquote data-i18n-html="verse.html">보라 형제가 연합하여 동거함이<br>어찌 그리 선하고 아름다운고</blockquote>
-      <figcaption data-i18n="verse.ref">시편 133:1</figcaption>
-    </figure>
+    <p class="muted" data-i18n="home.sub">친구와 함께, 혼자서도 즐겁게. 2~6명이 즐기는 타일 게임.</p>
     <button id="btnRejoin" class="primary big hidden"></button>
     <label><span data-i18n="home.name">내 이름</span> <input id="name" maxlength="12" placeholder="이름" data-i18n-ph="home.namePh" autocomplete="nickname"></label>
-    <button id="btnCreate" class="primary big" data-i18n="home.create">새 방 만들기</button>
-    <button id="btnPractice" class="big practice"><span data-i18n="home.practice">🕊 혼자 연습하기</span> <small data-i18n="home.practiceSub">쉬운 컴퓨터와 · 시간 제한 없음</small></button>
+    <button id="btnCreate" class="primary big home-action"><span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87M15 3.13a4 4 0 0 1 0 7.75"/><circle cx="9" cy="7" r="4"/></svg></span><span class="action-copy"><span data-i18n="home.create">친구와 하기 · 방 만들기</span><small data-i18n="home.createSub">링크 하나로 같은 테이블에</small></span><span class="action-arrow" aria-hidden="true">↗</span></button>
+    <button id="btnPractice" class="big practice home-action"><span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="14" rx="4"/><path d="M12 3v4M8 12h.01M16 12h.01M9 17h6"/></svg></span><span class="action-copy"><span data-i18n="home.practice">혼자 연습하기</span><small data-i18n="home.practiceSub">컴퓨터 1~5명 · 난이도 선택</small></span><span class="action-arrow" aria-hidden="true">→</span></button>
     <div class="or" data-i18n="home.or">또는</div>
     <div class="row">
       <input id="code" maxlength="4" placeholder="방 코드" data-i18n-ph="home.codePh" data-i18n-aria="home.codePh" autocapitalize="characters" autocomplete="off">
@@ -71,6 +66,10 @@
     <details class="rules" id="homeRules">
       <summary data-i18n="rules.title">📖 규칙 한눈에</summary>
     </details>
+    <figure class="verse">
+      <blockquote data-i18n-html="verse.html">보라 형제가 연합하여 동거함이<br>어찌 그리 선하고 아름다운고</blockquote>
+      <figcaption data-i18n="verse.ref">시편 133:1</figcaption>
+    </figure>
     <div class="lang-switch" data-i18n-aria="lang.label" aria-label="언어"></div>
   </div>
 </section>
@@ -78,7 +77,7 @@
 <section id="lobby" class="screen hidden">
   <div class="card center arch">
     <!-- 넓은 화면·폰 가로에선 두 칸(왼쪽 초대 / 오른쪽 참가자·시작), 좁은 화면에선 칸 없이 한 줄 (flow.css .lobby-col) -->
-    <div class="lobby-col lobby-invite">
+    <div id="lobbyInvitePanel" class="lobby-col lobby-invite">
       <p class="muted" data-i18n="lobby.code">방 코드</p>
       <div id="lobbyCode" class="bigcode"></div>
       <div class="invite">
@@ -91,11 +90,23 @@
     </div>
     <div class="lobby-col lobby-people">
       <div class="connection-note hidden" data-connection role="status"></div>
+      <div class="lobby-intro">
+        <h2 id="lobbyTitle"></h2>
+        <p id="lobbySubtitle" class="muted"></p>
+      </div>
       <h3><span data-i18n="lobby.players">참가자</span> <span id="lobbyCount"></span></h3>
       <ul id="lobbyPlayers" class="plist"></ul>
-      <div class="row botrow">
-        <button id="btnAddEasy" data-i18n="lobby.addEasy">🤖 쉬움 봇 추가</button>
-        <button id="btnAddHard" data-i18n="lobby.addHard">🤖 어려움 봇 추가</button>
+      <p id="lobbyDeck" class="muted deck-note"></p>
+      <div id="botSetup" class="bot-setup" aria-labelledby="botSetupTitle">
+        <div class="bot-setup-heading">
+          <h4 id="botSetupTitle" data-i18n="lobby.bots">컴퓨터 상대</h4>
+          <span id="botSummary" role="status" aria-live="polite"></span>
+        </div>
+        <div class="row botrow">
+          <button id="btnAddEasy" data-i18n="lobby.addEasy">🤖 쉬움 봇 추가</button>
+          <button id="btnAddHard" data-i18n="lobby.addHard">🤖 어려움 봇 추가</button>
+        </div>
+        <p id="botSetupHint" class="muted"></p>
       </div>
       <label id="timerWrap"><span data-i18n="lobby.timer">턴 제한 시간</span>
         <select id="timer">
@@ -106,6 +117,7 @@
       <button id="btnStart" class="primary big" data-i18n="lobby.start">게임 시작</button>
       <p id="lobbyHint" class="muted"></p>
     </div>
+    <button id="btnPracticeInvite" class="ghost hidden" type="button" aria-expanded="false" aria-controls="lobbyInvitePanel"></button>
     <div id="lobbyChatSlot" class="chat-slot"></div>
     <button id="btnLeave" class="ghost" data-i18n="lobby.leave">방 나가기</button>
     <div class="lang-switch" data-i18n-aria="lang.label" aria-label="언어"></div>
@@ -115,7 +127,7 @@
 <section id="game" class="screen hidden">
   <header class="topbar">
     <div class="players" id="players"></div>
-    <div class="meta"><span id="poolCount"></span><span id="clock"></span><button id="btnChat" class="ghost small" title="채팅" aria-label="채팅" data-i18n-title="game.chat" data-i18n-aria="game.chat">💬<span id="chatBadge" class="badge hidden"></span></button><button id="btnRules" class="ghost small" title="규칙 한눈에" aria-label="규칙 한눈에" data-i18n-title="game.rules" data-i18n-aria="game.rules">?</button><button id="btnMenu" class="ghost small" title="메뉴" aria-label="메뉴" data-i18n-title="game.menu" data-i18n-aria="game.menu">⋯</button></div>
+    <div class="meta"><span class="pool-meta"><span class="stock" aria-hidden="true"><i></i><i></i><i></i></span><span id="poolCount"></span></span><span id="clock"></span><button id="btnChat" class="ghost small" title="채팅" aria-label="채팅" data-i18n-title="game.chat" data-i18n-aria="game.chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 1-8 8H8l-5 3v-7a8 8 0 1 1 17-4Z"/><path d="M7 10h10M7 14h6"/></svg><span id="chatBadge" class="badge hidden"></span></button><button id="btnRules" class="ghost small" title="규칙 한눈에" aria-label="규칙 한눈에" data-i18n-title="game.rules" data-i18n-aria="game.rules">?</button><button id="btnMenu" class="ghost small" title="메뉴" aria-label="메뉴" data-i18n-title="game.menu" data-i18n-aria="game.menu">⋯</button></div>
   </header>
   <div class="connection-note hidden" data-connection role="status"></div>
   <div id="status" class="status" aria-live="polite" aria-atomic="true"></div>
@@ -127,7 +139,7 @@
       <button id="btnUndo" class="ic" title="한 수 되돌리기 (Ctrl+Z)" aria-label="한 수 되돌리기" data-i18n-title="game.undoTitle" data-i18n-aria="game.undoAria"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4.5 3.5 9 8 13.5M4 9h8.5a4.5 4.5 0 0 1 0 9H10"/></svg><span data-i18n="game.undo">한 수</span></button>
       <button id="btnReset" class="ic hidden" title="이번 턴 처음 상태로" aria-label="이번 턴 처음 상태로" data-i18n-title="game.resetTitle" data-i18n-aria="game.resetTitle"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.2 7.2A6.5 6.5 0 1 1 3.5 11M3.6 2.8v4.6h4.6"/></svg><span class="lb" data-i18n="game.reset">처음</span></button>
       <button id="btnSortNum" title="숫자순 정렬" aria-label="숫자순 정렬" data-i18n-title="game.sortNum" data-i18n-aria="game.sortNum">123</button>
-      <button id="btnSortColor" title="색깔순 정렬" aria-label="색깔순 정렬" data-i18n-title="game.sortColor" data-i18n-aria="game.sortColor">🎨</button>
+      <button id="btnSortColor" title="색깔순 정렬" aria-label="색깔순 정렬" data-i18n-title="game.sortColor" data-i18n-aria="game.sortColor"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="5.5" cy="5.5" r="3" fill="var(--c0)"/><circle cx="14.5" cy="5.5" r="3" fill="var(--c1)"/><circle cx="5.5" cy="14.5" r="3" fill="var(--c2)"/><circle cx="14.5" cy="14.5" r="3" fill="var(--c3)"/></svg></button>
       <span class="spacer"></span>
       <button id="btnDraw" data-i18n="game.draw">뽑기</button>
       <button id="btnDone" class="primary"><span data-i18n="game.done">완료</span><small class="why hidden"></small></button>
@@ -176,6 +188,7 @@
     <button id="btnRules2" type="button" data-i18n="rules.title">📖 규칙 한눈에</button>
     <button id="btnShare2" data-i18n="lobby.share">초대 링크 복사</button>
     <button id="btnSound">소리 켜짐</button>
+    <label class="volume-control" for="effectVolume"><span><span data-i18n="pref.volume">효과음 크기</span><output id="effectVolumeValue" for="effectVolume">50%</output></span><input id="effectVolume" type="range" min="0" max="100" step="5" value="50"></label>
     <section class="prefs" aria-labelledby="prefsH">
       <h4 id="prefsH" data-i18n="menu.prefs">내 화면 설정</h4>
       <div class="lang-switch" data-i18n-aria="lang.label" aria-label="언어"></div>
@@ -226,6 +239,7 @@
 <script src="qr.js"></script>
 <script src="sfx.js"></script>
 <script src="i18n.js"></script>
+<script src="table-feel.js"></script>
 <script src="tile-motion.js"></script>
 <script src="app.js"></script>
 <script src="flow.js"></script>

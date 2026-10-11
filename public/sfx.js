@@ -26,10 +26,15 @@
 
   const store = (() => { try { return root.localStorage; } catch (e) { return null; } })();
   let mode = 'on';
+  let volume=0.5;
   try {
     const v = store && store.getItem(KEY);
     if (MODES.includes(v)) mode = v === 'buzz' && !CAN_BUZZ ? 'off' : v;   // 진동이 없으면 '진동만'은 사실상 조용히 → 끔
   } catch (e) {}
+  try {
+    const saved=store && store.getItem('rummi-volume');
+    if(saved!=null && Number.isFinite(Number(saved)))volume=Math.max(0,Math.min(1,Number(saved)));
+  } catch(e) {}
   const clock = () => (root.performance && root.performance.now ? root.performance.now() : Date.now());
   let ctx = null, master = null, noiseBuf = null, gestureAt = -1e9;
   const voices = [];                      // { g, end }
@@ -43,7 +48,7 @@
       try {
         ctx = new AC();
         master = ctx.createGain();
-        master.gain.value = 0.5;
+        master.gain.value = volume;
         let out = master;
         if (ctx.createDynamicsCompressor) {     // 여러 소리가 겹쳐도 찢어지지 않게
           const comp = ctx.createDynamicsCompressor();
@@ -143,23 +148,26 @@
 
   // 소리 사전 — 각 함수는 길이(초)를 돌려줌
   const SOUNDS = {
-    pick(o, t) { hiss(o, t, 0.018, 2500, 1.4, 0.32); tone(o, P(7), t, 0.035, 0.035, 0.002); return 0.06; },
-    place(o, t) { hiss(o, t, 0.03, 1600, 1.1, 0.42); thump(o, LOW.A3, t, 0.1, 0.5); return 0.13; },
+    pick(o, t) { hiss(o, t, 0.015, 2150, 1.2, 0.36); thump(o, LOW.A3, t, 0.045, 0.18); tone(o, P(0), t, 0.065, 0.025, 0.002); return 0.09; },
+    place(o, t) { hiss(o, t, 0.045, 1200, 0.8, 0.12, 2200); return 0.07; },
+    // 착지 시의 짧은 타일 접촉음. 이동 시작음·화음보다 작고 건조하게.
+    settle(o, t, s) { hiss(o, t, 0.009, 3100 + (s % 3) * 110, 1.7, 0.62); thump(o, LOW.A3, t, 0.075, 0.4); tone(o, P(1), t + .003, .11, .035, .002); hiss(o, t + 0.018, 0.012, 1500, 0.9, 0.13); return 0.14; },
+    rack(o,t) { hiss(o,t,.012,1800,1,.4);thump(o,LOW.E3,t,.095,.44);hiss(o,t+.022,.018,750,.8,.14);return .14; },
     back(o, t) { thump(o, LOW.E3, t, 0.14, 0.45); return 0.17; },
     sort(o, t) {
       for (let i = 0; i < 4; i++) {
         const ti = t + i * 0.045;
-        hiss(o, ti, 0.016, 1900 + i * 450, 1.4, 0.26);
-        tone(o, P(3 + i), ti, 0.04, 0.035, 0.002);
+        hiss(o, ti, 0.025, 1400 + i * 170, 1.1, 0.3, 950);
+        thump(o, LOW.A3, ti + .014, .035, .13);
       }
       return 0.24;
     },
-    valid(o, t, s) { bell(o, P(1 + Math.max(1, s)), t, 0.75, 0.2); return 0.8; },
+    valid(o, t, s) { tone(o, P(1 + Math.max(1,s)), t, 0.22, 0.14, 0.003); tone(o, P(3 + Math.max(1,s)), t + 0.055, 0.32, 0.11, 0.003); return 0.4; },
     invalid(o, t) { thump(o, LOW.D3, t, 0.18, 0.42); return 0.2; },
-    draw(o, t) { hiss(o, t, 0.22, 700, 0.9, 0.22, 2600); return 0.25; },
-    turn(o, t) { bell(o, P(3), t, 0.8, 0.22); bell(o, P(5), t + 0.14, 1.0, 0.22); return 1.2; },
+    draw(o, t) { hiss(o,t,.09,850,.8,.3,1650);hiss(o,t+.05,.015,2600,1.4,.32);thump(o,LOW.A3,t+.045,.05,.16);return .14; },
+    turn(o, t) { bell(o, P(1), t, 0.65, 0.13); bell(o, P(3), t + 0.1, .75, 0.11); return .9; },
     next(o, t) { bell(o, P(2), t, 0.6, 0.1); return 0.65; },
-    commit(o, t, s) { bell(o, P(s), t, 0.7, 0.17); return 0.75; },
+    commit(o, t, s) { hiss(o, t, 0.014, 2400 + (s % 3) * 150, 1.3, 0.28); thump(o, LOW.A3, t, 0.06, 0.18); tone(o, P(s), t + 0.025, 0.4, 0.14, 0.004); tone(o, P(s+2), t + 0.065, 0.45, 0.07, 0.004); return 0.54; },
     joker(o, t) {   // 종소리 + 살짝 어긋난 한 옥타브 위 두 음이 반짝이며 맥놀이
       bell(o, P(5), t, 0.9, 0.17);
       tone(o, P(5) * 2 * 1.006, t + 0.03, 0.85, 0.045, 0.02);
@@ -213,6 +221,7 @@
   function setMode(m) {
     if (!MODES.includes(m)) return mode;
     mode = m;
+    if(master && ctx)master.gain.setTargetAtTime(m==='on'?volume:0,ctx.currentTime,0.015);
     try { if (store) store.setItem(KEY, m); } catch (e) {}
     if (m === 'on') { audio(); play('next', { buzz: false }); }
     else if (m === 'buzz') buzz(HAPTIC.turn);
@@ -224,8 +233,17 @@
     return setMode(next);
   };
 
+  function setVolume(v) {
+    if(!Number.isFinite(v))return volume;
+    volume=Math.max(0,Math.min(1,v));
+    try { if(store)store.setItem('rummi-volume',String(volume)); } catch(e) {}
+    if(master && ctx)master.gain.setTargetAtTime(mode==='on'?volume:0,ctx.currentTime,0.015);
+    return volume;
+  }
+
   return {
-    play, buzz, setMode, cycle,
+    play, buzz, setMode, cycle, setVolume,
+    get volume() { return volume; },
     get mode() { return mode; },
     get canBuzz() { return CAN_BUZZ; },
     label: m => {   // 화면 말(i18n.js)이 있으면 그 말로, 없으면 한국어. 진동이 없는 기기는 '소리 켜짐/꺼짐'

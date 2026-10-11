@@ -49,6 +49,24 @@ button:focus-visible { outline-width:3px; outline-offset:4px; }
 
 .motion-ghost { position:fixed!important; z-index:65; margin:0!important; pointer-events:none!important; animation:none!important; transition:none!important; will-change:transform; box-shadow:0 5px 12px #0004; }
 #table .tile.motion-arrived { outline:2px solid #dfc58b; outline-offset:1px; }
+.deck-note { text-align:left; font-size:12px; line-height:1.5; }
+/* Six seats remain visible without making the play tiles smaller. */
+.players.p6 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); max-width:960px; }
+.players.p6 .pchip { min-width:0; border-radius:12px; }
+.players.p6 .l1, .players.p6 .l1 b { min-width:0; }
+.players.p6 .l1 { width:100%; }
+.players.p6 .l1 b { flex:1; overflow:hidden; }
+.players.p6 .nm { max-width:100%; }
+.players.p6 .me { display:none; }
+.players.p6 .cnt, .players.p6 .pre { flex:none; }
+.players.p6 .sub { max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+.players.p6 .self:not(.turn) { border-color:#f1d27fcc; }
+@media (max-width:600px) {
+  .players.p6 { grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px 6px; }
+  .players.p6 .pchip { padding:4px 7px; }
+  .players.p6 .pre .w { display:none; }
+  .players.p6 .pre .o { display:inline-block; }
+}
 body.calm .motion-ghost { display:none!important; }
 @media (prefers-reduced-motion:reduce) { .motion-ghost { display:none!important; } }
 
@@ -68,6 +86,33 @@ body.calm .motion-ghost { display:none!important; }
 .set .tiles { flex-shrink:0; }
 .connection-note { flex:none; background:#f0dfb8; color:#473311; font-size:13px; line-height:1.5; padding:9px 14px; text-align:center; border-bottom:1px solid #c0a375; word-break:keep-all; }
 .lobby-people .connection-note { border-radius:8px; }
+
+/* Keep opponent setup in one quiet, readable panel on both desktop and phones. */
+.lobby-intro { text-align:left; }
+.lobby-intro h2 { margin:0 0 6px; font-size:24px; }
+.lobby-intro p { margin:0; font-size:14px; line-height:1.6; }
+.bot-setup { min-width:0; padding:14px; border:1px solid #bda16b55; border-radius:12px; background:#1724420a; text-align:left; }
+.bot-setup-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px 12px; margin-bottom:10px; }
+.bot-setup-heading h4 { margin:0; font-size:15px; }
+#botSummary { font-size:12px; color:#72664f; }
+#botSetupHint { margin:10px 0 0; font-size:12px; line-height:1.6; }
+.bot-setup .botrow { gap:8px; }
+#lobbyPlayers .player-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#lobbyPlayers .lv, #lobbyPlayers .x, #lobbyPlayers .tag { flex-shrink:0; }
+.bot-setup[aria-busy="true"] { opacity:.7; }
+#lobby.practice-lobby .card { display:flex; flex-direction:column; max-width:560px; border-radius:24px; padding-top:22px; gap:12px; }
+#lobby.practice-lobby .card.arch::before { width:44px; height:44px; }
+#lobby.practice-lobby .lobby-people { display:flex; flex-direction:column; gap:12px; width:100%; order:0; }
+#lobby.practice-lobby #btnPracticeInvite { order:1; }
+#lobby.practice-lobby .lobby-invite { order:2; width:100%; }
+#lobby.practice-lobby .chat-slot { order:3; width:100%; }
+#lobby.practice-lobby #btnLeave { order:4; }
+#lobby.practice-lobby .lang-switch { order:5; }
+@media (max-width:400px) {
+  .bot-setup { padding:12px 10px; }
+  .bot-setup .botrow button { font-size:13px; min-height:44px; }
+  .lobby-intro h2 { font-size:21px; }
+}
 .controls button[aria-busy="true"] { opacity:.65; cursor:wait; }
 @media (min-width:1000px) {
  .rack-heading { max-width:1400px; margin:0 auto 7px; padding:0 5px; }

@@ -7,7 +7,7 @@
 const R = require('./public/rules.js');
 
 const J = 'J';
-const kindOf = id => (id >= 104 ? J : Math.floor(id / 2));   // 같은 색·숫자면 같은 kind (color*13 + num-1)
+const kindOf = id => { const t = R.tile(id); return t.joker ? J : t.color * 13 + t.num - 1; };
 const NODE_LIMIT = 40000;
 const SOLVE_MS = 3000;   // 안전장치 (보통 수 ms, 큰 테이블에서 드물게 1~2초). 넘으면 기본 전략으로 대신함
 
@@ -40,7 +40,7 @@ function candidates(rack, useJokers = true) {
     const colors = [0, 1, 2, 3].filter(c => has(c * 13 + n - 1));
     for (let mask = 1; mask < 1 << colors.length; mask++) {
       const real = colors.filter((_, i) => mask & (1 << i)).map(c => c * 13 + n - 1);
-      for (let j = 0; j <= Math.min(jokers, 2); j++) {
+      for (let j = 0; j <= Math.min(jokers, 3); j++) {
         const size = real.length + j;
         if (size >= 3 && size <= 4) out.push({ kinds: real.concat(Array(j).fill(J)), value: n * size, jokers: j });
       }
@@ -122,7 +122,7 @@ function tryPlace(table, id) {
   for (let i = 0; i < table.length; i++) {
     const a = R.analyze(table[i]);
     if (!a.ok || a.kind !== 'run') continue;
-    const vals = a.order.map(x => (x >= 104 ? a.jokerAs[x] : R.tile(x).num));
+    const vals = a.order.map(x => (R.tile(x).joker ? a.jokerAs[x] : R.tile(x).num));
     const k = vals.indexOf(t.num);
     if (k < 2 || k > vals.length - 3) continue;
     const left = a.order.slice(0, k + 1), right = [id].concat(a.order.slice(k + 1));
@@ -134,7 +134,7 @@ function tryPlace(table, id) {
 
 // 테이블에서 한 장 빌려 손패 두 장과 새 묶음 만들기
 function tryBorrow(table, hand) {
-  const real = hand.filter(id => id < 104);
+  const real = hand.filter(id => !R.tile(id).joker);
   for (let x = 0; x < real.length; x++) {
     for (let y = x + 1; y < real.length; y++) {
       for (let i = 0; i < table.length; i++) {
@@ -174,7 +174,36 @@ function groupOk(g1, g2, gj) {
 }
 const MAX_STATES = 300000;
 
+// 확장판은 같은 타일 3장·조커 4장이다. 기존 DP의 2장 한도를 넘는
+// 묶음은 온전히 보존하고, 남은 묶음과 손패에서 2장까지 골라 재배치한다.
+// 전체 손패를 쓰는 planNormal과 비교하므로 확장 타일도 계속 사용할 수 있다.
+function solveExpanded(table, hand, ms) {
+  let used = new Map();
+  const mutable = [], frozen = [], rack = [];
+  const fits = ids => {
+    const next = new Map(used);
+    for (const id of ids) {
+      const k = kindOf(id), n = (next.get(k) || 0) + 1;
+      if (n > 2) return null;
+      next.set(k, n);
+    }
+    return next;
+  };
+  for (const set of table) {
+    const next = fits(set);
+    if (next) { mutable.push(set); used = next; }
+    else frozen.push(set);
+  }
+  for (const id of hand) {
+    const next = fits([id]);
+    if (next) { rack.push(id); used = next; }
+  }
+  const solved = solveTable(mutable, rack, ms);
+  return solved ? frozen.concat(solved) : null;
+}
+
 function solveTable(table, hand, ms = SOLVE_MS) {
+  if ([...countKinds(table.flat().concat(hand)).values()].some(n => n > 2)) return solveExpanded(table, hand, ms);
   const deadline = Date.now() + ms;
   const must = [0, 1, 2, 3].map(() => new Array(14).fill(0)), opt = [0, 1, 2, 3].map(() => new Array(14).fill(0));
   let mustJ = 0, optJ = 0;
@@ -314,7 +343,7 @@ function playedOf(table, newTable) {
 function worth(rack, played) {
   const set = new Set(played);
   let v = 0;
-  for (const id of played) v += id >= 104 ? -JOKER_KEEP : LEFT_COST(R.tile(id).num);
+  for (const id of played) v += R.tile(id).joker ? -JOKER_KEEP : LEFT_COST(R.tile(id).num);
   if (rack.every(id => set.has(id))) v += WIN;
   return v;
 }
@@ -333,9 +362,9 @@ function planEasy(table, rack, melded, rng) {
     for (const id of s.ids) hand.splice(hand.indexOf(id), 1);
   }
   if (rng() < 0.6) {
-    const onlyJokers = hand.every(id => id >= 104);
+    const onlyJokers = hand.every(id => R.tile(id).joker);
     for (const id of hand.slice()) {
-      if (id >= 104 && !onlyJokers) continue;
+      if (R.tile(id).joker && !onlyJokers) continue;
       if (tryAppend(T, id)) hand.splice(hand.indexOf(id), 1);
     }
   }
@@ -352,9 +381,9 @@ function planNormal(table, rack, melded) {
   }
   for (let guard = 0; guard < 40; guard++) {
     let changed = false;
-    const onlyJokers = hand.every(id => id >= 104);
+    const onlyJokers = hand.every(id => R.tile(id).joker);
     for (const id of hand.slice()) {
-      if (id >= 104 && !onlyJokers) continue;   // 조커는 아껴 두기
+      if (R.tile(id).joker && !onlyJokers) continue;   // 조커는 아껴 두기
       if (tryPlace(T, id)) { hand.splice(hand.indexOf(id), 1); changed = true; }
     }
     if (!changed && tryBorrow(T, hand)) changed = true;

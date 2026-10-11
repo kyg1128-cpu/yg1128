@@ -337,7 +337,7 @@
   }
   $('#coach').onclick = hideTip;   // 누르면 닫힘 (다음 안내는 다음 화면 갱신 때)
 
-  // ---------- 혼자 연습하기: 방 만들기 → 쉬운 봇 → 바로 시작 (시간 제한 없음) ----------
+  // ---------- 혼자 연습하기: 쉬운 봇 1명으로 준비 → 상대를 고른 뒤 시작 ----------
   $('#btnPractice').onclick = async () => {
     const btn = $('#btnPractice');
     if (btn.disabled) return;
@@ -345,11 +345,11 @@
     const typed = nameInput.value.trim();
     if (typed) getName();
     try {
-      const r = await api('create', { name: typed || tx('practice.name') });
+      const r = await api('create', { name: typed || tx('practice.name'), mode: 'practice' });
       session = { room: r.room, token: r.token };
       saveSession();
       history.replaceState(null, '', '?r=' + r.room);
-      try { await api('addBot', { level: 'easy' }); await api('start'); } catch (err) { toast(err.message); }
+      try { await api('addBot', { level: 'easy' }); } catch (err) { toast(err.message); }
       $('#btnRejoin').classList.add('hidden');
       connect();
     } catch (err) { toast(err.message); }

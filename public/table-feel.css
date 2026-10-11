@@ -1,0 +1,49 @@
+/* Ivory resin: highlights, a softly worn face, a bevel and a visible side wall. */
+:is(#table,#rack) .tile,.motion-ghost.tile {
+  --resin:#fffef6; --resin-low:#eae7d9; --side:#b7b8a7;
+  background-color:var(--resin);
+  background-image:linear-gradient(135deg,#ffffffc9 0%,#ffffff00 43%,#6863400a 100%),url("tile-grain.svg"),linear-gradient(180deg,var(--resin) 60%,var(--resin-low));
+  background-size:100% 100%,64px 64px,100% 100%;
+  border-color:#d2d1c1; border-top-color:#fff;
+  border-radius:7px;
+  box-shadow:inset 1px 1px 1px #fff,inset -1px -2px 1px #a8a58b35,0 3px 0 var(--side),0 4px 1px #7a806238,0 5px 7px #2b47351c;
+  /* Keep numeral ink clean: the old emboss shadows looked like white flecks at small sizes. */
+  text-shadow:none;
+}
+:is(#table,#rack) .tile.joker,.motion-ghost.joker { --resin:#fcf9ff; --resin-low:#e6dfef; --side:#b6adbf; }
+:is(#table,#rack) .tile.fresh { --resin:#f7faff; --resin-low:#e0e8f5; --side:#aabbd4; border-color:#abc0e9; }
+:is(#table,#rack) .tile.sel {
+  box-shadow:inset 1px 1px 1px #fff,inset -1px -2px 1px #a8a58b35,0 3px 0 var(--side),0 0 0 2px #3662ea,0 9px 12px #28425b30;
+}
+#table .tile.lastmove:not(.sel):not(.fresh) { border-bottom-color:#7391d5; --side:#8ba2d5; }
+#table .tile.motion-arrived { outline:none; }
+#table .set.rv .tile:not(.sel) { --side:#8ba2d5; }
+#table .tile.lastmove:not(.sel):not(.fresh),#table .set.rv .tile:not(.sel) { box-shadow:inset 1px 1px 1px #fff,inset -1px -2px 1px #a8a58b35,0 3px 0 var(--side),0 4px 1px #7a806238,0 5px 7px #2b47351c; }
+.motion-ghost { box-shadow:inset 1px 1px 1px #fff,inset -1px -2px 1px #a8a58b35,0 3px 0 var(--side),0 10px 15px #2b47352b; }
+#table .set.justfit { animation:none; }
+.feel-ready {
+  position:absolute; top:3px; left:7px; max-width:calc(100% - 42px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:#38654b; font:650 10px/16px var(--sans); pointer-events:none;
+}
+.feel-impact,.feel-spark,.feel-glint { position:fixed; pointer-events:none; z-index:8; }
+.feel-impact { border:1px solid #709a825e; border-radius:50%; background:radial-gradient(ellipse,#ffffff4d,transparent 68%); }
+.feel-glint { border-radius:12px; border:1px solid #7fa28eaa; box-shadow:0 0 0 2px #ddf3e266; background:linear-gradient(105deg,transparent 28%,#ffffff6b 48%,transparent 69%); }
+.feel-glint.confirmed { border-color:#7392df; box-shadow:0 0 0 2px #d8e4ff66; }
+.feel-spark { width:4px; height:4px; border-radius:50%; background:#8daa98; }
+.feel-spark.confirmed { background:#7998df; }
+.feel-glint.big { border-width:2px; }
+.feel-glint.joker { border-color:#a28ac4; box-shadow:0 0 0 2px #e7dbfa66; }
+.feel-spark.joker { background:#a28ac4; }
+.volume-control { margin:0; padding:4px 2px 0; font-size:12px; color:var(--muted); }
+.volume-control>span { display:flex; align-items:center; justify-content:space-between; }
+.volume-control output { font-variant-numeric:tabular-nums; }
+.volume-control input[type="range"] { width:100%; height:32px; min-height:32px; margin:2px 0 0; padding:0; border:0; background:transparent; accent-color:var(--blue); cursor:pointer; }
+@media (pointer:coarse) { .volume-control input[type="range"] { height:44px; min-height:44px; } }
+@media (hover:hover) and (pointer:fine) {
+  body:not(.calm) :is(#table.mine,#rack) .tile[draggable="true"]:not(.sel):hover { transform:translateY(-3px); }
+}
+@media (forced-colors:active) {
+  :is(#table,#rack) .tile { border:1px solid ButtonText; background:Canvas; text-shadow:none; }
+  :is(#table,#rack) .tile.sel { outline:2px solid Highlight; }
+  .feel-ready { color:CanvasText; }
+}

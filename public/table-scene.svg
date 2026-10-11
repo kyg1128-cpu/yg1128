@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="320" viewBox="0 0 560 320" fill="none">
+<defs>
+<linearGradient id="wood" x2=".7" y2="1"><stop stop-color="#907351"/><stop offset=".5" stop-color="#695a3e"/><stop offset="1" stop-color="#423d2b"/></linearGradient>
+<radialGradient id="felt" cx=".38" cy=".2" r=".9"><stop stop-color="#51725b"/><stop offset="1" stop-color="#203e32"/></radialGradient>
+<linearGradient id="face" x2=".35" y2="1"><stop stop-color="#fffef6"/><stop offset=".65" stop-color="#faf9ea"/><stop offset="1" stop-color="#e1e3cb"/></linearGradient>
+<linearGradient id="edge" x2="0" y2="1"><stop stop-color="#c9ceb5"/><stop offset="1" stop-color="#919d7e"/></linearGradient>
+<linearGradient id="shine" x1="0" y1="0" x2="1" y2="1"><stop stop-color="white" stop-opacity="0"/><stop offset=".28" stop-color="white" stop-opacity=".7"/><stop offset=".4" stop-color="white" stop-opacity="0"/></linearGradient>
+<pattern id="weave" width="4" height="4" patternUnits="userSpaceOnUse"><path d="M0 1h4M1 0v4" stroke="white" stroke-opacity=".025" stroke-width=".4"/></pattern>
+<filter id="s" x="-40%" y="-30%" width="190%" height="190%"><feDropShadow dx="0" dy="7" stdDeviation="4" flood-color="#081d16" flood-opacity=".3"/></filter>
+<g id="tile" fill="none"><rect y="4" width="48" height="70" rx="7" fill="url(#edge)"/><rect width="48" height="69" rx="7" fill="url(#face)" stroke="#fffef6"/><rect x="1" y="1" width="46" height="65" rx="6" fill="url(#shine)"/><path d="M5 64q19 3 38 0" stroke="#a6ae91" stroke-opacity=".4"/><path d="M5 5q18-4 38 0" stroke="white" stroke-width="1.5"/></g>
+</defs>
+<ellipse cx="280" cy="291" rx="240" ry="19" fill="#23362b" opacity=".13"/>
+<rect x="15" y="16" width="530" height="272" rx="104" fill="url(#wood)"/>
+<rect x="27" y="27" width="506" height="248" rx="94" stroke="#d3b47c" stroke-opacity=".7"/>
+<rect x="34" y="34" width="492" height="232" rx="86" fill="url(#felt)" stroke="#122f27" stroke-width="2"/>
+<rect x="34" y="34" width="492" height="232" rx="86" fill="url(#weave)"/>
+<g transform="translate(95 58) rotate(-7 78 34)" filter="url(#s)" font-family="Arial,sans-serif" font-weight="700" font-size="31" text-anchor="middle">
+<use href="#tile"/><circle cx="9" cy="10" r="2" fill="#ba3540"/><text x="24" y="46" fill="#ba3540">7</text>
+<g transform="translate(53)"><use href="#tile"/><path d="m9 8 3 5H6Z" fill="#315bc1"/><text x="24" y="46" fill="#315bc1">7</text></g>
+<g transform="translate(106)"><use href="#tile"/><rect x="7" y="8" width="5" height="5" rx=".7" fill="#95550d"/><text x="24" y="46" fill="#95550d">7</text></g>
+</g>
+<g transform="translate(246 157) rotate(5 78 34)" filter="url(#s)" font-family="Arial,sans-serif" font-weight="700" font-size="31" text-anchor="middle" fill="#315bc1">
+<use href="#tile"/><path d="m9 8 3 5H6Z"/><text x="24" y="46">4</text>
+<g transform="translate(53)"><use href="#tile"/><path d="m9 8 3 5H6Z"/><text x="24" y="46">5</text></g>
+<g transform="translate(106)"><use href="#tile"/><path d="m9 8 3 5H6Z"/><text x="24" y="46">6</text></g>
+</g>
+<g transform="translate(401 58) rotate(10 24 35)" filter="url(#s)"><use href="#tile"/><path d="M21 13h6v13h11v6H27v24h-6V32H10v-6h11Z" fill="#b8954f" stroke="#90703e" stroke-width=".5"/><path d="M22 15v39M12 27h24" stroke="#fff2c4" stroke-width=".6" opacity=".7"/></g>
+<g transform="translate(79 197) rotate(-9 52 12)" filter="url(#s)"><rect width="105" height="24" rx="5" fill="url(#wood)"/><rect x="6" y="5" width="93" height="10" rx="3" fill="#2c3023" opacity=".45"/><path d="M8 20h89M11 2h80" stroke="#d4b887" stroke-opacity=".45"/><path d="M10 18q35-2 87 0" stroke="#392f21" stroke-opacity=".6"/></g>
+<g transform="translate(448 196)"><ellipse cy="5" rx="25" ry="17" fill="#122e24" opacity=".4"/><ellipse rx="24" ry="16" fill="url(#face)"/><ellipse rx="19" ry="12" stroke="#b9c1a7"/><path d="M14-6c14-5 15 11 1 8" stroke="#f7f7ea" stroke-width="4"/><ellipse cx="-2" cy="-3" rx="15" ry="11" fill="#fdfcf1"/><ellipse cx="-2" cy="-4" rx="11" ry="7.5" fill="#70543b"/><ellipse cx="-4" cy="-6" rx="6" ry="2" fill="#c4a47d" opacity=".45"/></g>
+</svg>

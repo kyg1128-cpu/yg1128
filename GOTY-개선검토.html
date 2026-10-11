@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>루미큐브 · 6인 업데이트와 손맛 개선 검토</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#142533;color:#ece8dc;font:16px/1.8 system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:48px 24px 70px}h1{font-size:clamp(28px,5vw,42px);line-height:1.3;max-width:760px}h2{margin-top:44px;color:#dfc68f;font-size:23px}h3{font-size:18px}p{max-width:850px}a{color:#c9dff1;text-underline-offset:4px}.sub{color:#b6c4cd;font-size:14px}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card{padding:22px;background:#213543;border:1px solid #bca77944;border-radius:16px}.card h3{margin:0 0 8px}.card p{margin:0}.badge{display:inline-block;background:#d9c18b;color:#1d2c37;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700}.scroll{overflow-x:auto;border:1px solid #bca77944;border-radius:12px}table{border-collapse:collapse;min-width:730px;width:100%;font-size:14px}th,td{text-align:left;vertical-align:top;padding:14px;border-bottom:1px solid #bca77933}th{color:#dfc68f;background:#213543}td:first-child{white-space:nowrap}li{margin:8px 0}footer{margin-top:48px;border-top:1px solid #bca77944;padding-top:18px;color:#b6c4cd;font-size:14px}@media(max-width:640px){main{padding:28px 18px 50px}.cards{grid-template-columns:1fr}}
+</style><main>
+<p class="sub">2026.10.10 · v1.2.0 · 구현 완료와 후속 제안을 구분한 검토</p>
+<h1>손끝에는 타일의 무게,<br>눈에는 다음 수의 명확함.</h1>
+<p>6인 플레이를 확장하면서 루미큐브·온라인 마작·퍼즐 게임의 연출을 다시 조사했습니다. 아래 적용안과 우선순위는 자료를 바탕으로 한 이 게임에 대한 설계 판단입니다. 타 게임의 자산·음원·캐릭터는 사용하지 않았습니다.</p>
+<h2>이번에 반영한 것</h2>
+<div class="cards">
+<article class="card"><span class="badge">구현</span><h3>친구와 봇을 섞어 2~6명</h3><p>연습은 봇 1~5명. 각 봇의 쉬움·어려움 선택, 삭제, 빈자리 안내를 유지했습니다. 5~6명은 숫자 3벌과 조커 4개, 총 160개로 자동 전환합니다. 2~4명은 106개입니다. <a href="https://www.piatnik.com/uploads/media/default/0001/03/5a8e17ffb90ef476618fa071af4a25ae898b432f.pdf">공식 확장 규칙</a></p></article>
+<article class="card"><span class="badge">구현</span><h3>작고 단단한 착지</h3><p>타일이 이동한 끝에 가로 2.5%·세로 2.5%의 짧은 눌림을 주고, 마른 접촉음을 조용하게 재생합니다. 묶음 확정은 접촉음 다음 화음으로 이어집니다. 조작 취소·효과 줄이기·소리 끄기를 따릅니다.</p></article>
+<article class="card"><span class="badge">구현</span><h3>여섯 자리의 판독성</h3><p>PC는 3열, 좁은 폰은 2열. 이름이 길면 말줄임하되 남은 장수와 차례를 확보합니다. 대기실에는 현재 인원에 따른 타일 수와 시작 손패 수를 표시합니다. 한국어·영어 모두 반영했습니다.</p></article>
+<article class="card"><span class="badge">기존 연출 유지·보강</span><h3>수의 결과를 읽는 박자</h3><p>변한 묶음이 차례로 빛나는 연출, 내려놓은 장수, 첫 등록·대규모 재배치·승리 구분을 유지했습니다. 추가 숫자 타일이 조커 반짝임이나 조커 소리를 내지 않도록 공통 판독으로 수정했습니다.</p></article>
+</div>
+<h2>참고한 사례와 가져올 원칙</h2>
+<ol>
+<li><strong>Tetris Effect: Connected:</strong> 공식 소개는 음악·배경·소리·효과가 플레이에 맞춰 함께 반응한다고 설명합니다. 이 게임에는 이동 종료와 접촉음을 맞추는 원칙을 적용했습니다. 계속 흔들리는 배경이나 음악 비트에 조작을 기다리게 하는 방식은 제안하지 않습니다. <a href="https://www.tetriseffect.game/">공식 소개</a></li>
+<li><strong>Mahjong Soul:</strong> 개발사 소개에는 상황별 튜토리얼, 친구 방, 타일·테이블 꾸미기, 역동적인 효과, 감정 표현이 있습니다. 가장 참고할 부분은 초보자의 행동을 설명하는 안내와 짧은 사회적 표현입니다. 캐릭터·가챠 체계는 이 게임의 교제 중심 방향과 별개입니다. <a href="https://store.steampowered.com/app/2739990/">개발사 제품 소개</a></li>
+<li><strong>Riichi City:</strong> 개발사는 튜토리얼, 게임 기록, 관전, 완성패 힌트, 버리기·뽑기 안내를 소개합니다. 여기에서는 연습용 힌트와 방금 수 복기가 긴 플레이 가치를 만드는 후보라고 판단했습니다. <a href="https://store.steampowered.com/app/1954420/">개발사 제품 소개</a></li>
+<li><strong>Balatro:</strong> GMTK 분석은 카드별 점수 집계와 높아지는 소리가 결과를 기다리는 재미를 만든다고 설명합니다. 이 게임에는 짧은 묶음별 확정 연출이 어울립니다. 첫 등록 30점과 오류 원인은 플레이 전에 계속 알려 주는 편이 적합하다고 판단했습니다. <a href="https://gmtk.substack.com/p/balatros-cursed-design-problem">GMTK의 설계 분석</a></li>
+<li><strong>게임 감각 연구:</strong> Pichlmair·Johansen의 조사 논문은 물리성·강조·지원으로 게임 감각을 분류합니다. GDC의 Folmer Kelly 발표는 맥락을 무시한 효과 추가를 경계합니다. 따라서 놓기·등록·승리를 서로 다른 강도로 표현하고, 반복 행동은 짧고 조용하게 만들었습니다. <a href="https://arxiv.org/abs/2011.09201">연구 논문</a> · <a href="https://www.gdcvault.com/play/1020861/">GDC 발표</a></li>
+</ol>
+<h2>다음에 반영할 만한 12가지</h2>
+<p class="sub">아래는 후속 제안입니다. 현재 구현된 기능으로 오해하지 않도록 상태를 명시했습니다. 소요 규모는 현 코드 기준의 상대적 판단입니다.</p>
+<div class="scroll"><table><thead><tr><th>우선순위</th><th>제안</th><th>효과·구현 기준</th><th>규모</th></tr></thead><tbody>
+<tr><td>1 · 미구현</td><td>연습 모드의 2단계 힌트</td><td>먼저 가능한 묶음의 성격만 알려 주고, 다시 누르면 실제 예시를 표시. 상대 패를 읽지 않는 손패·공개 테이블 기반 힌트.</td><td>중</td></tr>
+<tr><td>1 · 미구현</td><td>상황별 3분 튜토리얼</td><td>첫 등록, 조커 대체, 런 쪼개기를 직접 한 번씩 해 보기. 읽는 규칙에서 행동으로 전환.</td><td>중</td></tr>
+<tr><td>1 · 미구현</td><td>방금 수 전후 복기</td><td>다섯 명을 기다리는 동안 이전 수에서 무엇이 바뀌었는지 전·후 보드로 확인. 남의 손패는 공개하지 않음.</td><td>중</td></tr>
+<tr><td>1 · 미구현</td><td>효과음 볼륨과 밤 모드</td><td>현재 켜기·진동·끄기에 볼륨 조절 추가. 타일음은 살리고 승리·알림은 작게 하는 프로필. 모바일 스피커 실청 후 조정.</td><td>소~중</td></tr>
+<tr><td>1 · 미구현</td><td>놓기 위치 미리보기</td><td>끌기나 탭 선택 시 들어갈 위치를 보여 주는 얇은 윤곽. 손을 떼기 전에 결과를 이해하고 오조작을 줄임.</td><td>중</td></tr>
+<tr><td>1 · 미구현</td><td>모두 준비·다음 판 준비</td><td>6인 방에서 참가자가 준비 상태를 표시하고 방장이 시작. 결과 창에서도 다음 판 참여 의사를 보여 주어 채팅 부담 감소.</td><td>중</td></tr>
+<tr><td>2 · 미구현</td><td>짧은 반응 네 가지</td><td>좋은 수·고마워요·잠깐만요·다시 한 판. 작은 말풍선, 전송 간격 제한, 개인별 숨기기. 타일을 가리지 않는 위치.</td><td>소~중</td></tr>
+<tr><td>2 · 미구현</td><td>타일 재질별 소리</td><td>무광 수지·도자기·나무의 짧은 소리 선택. 임의 음높이보다 접촉 잡음·잔향·음량을 미세하게 달리해 반복 피로 감소.</td><td>중</td></tr>
+<tr><td>2 · 미구현</td><td>차례 전환의 시선 유도</td><td>기존 금색 칩·알림에 짧은 자리 이동 강조를 보강. 이미 다른 조작을 하고 있으면 화면을 강제로 스크롤하지 않음.</td><td>소</td></tr>
+<tr><td>2 · 미구현</td><td>대규모 재배치의 요약</td><td>기존 변경 묶음 강조에 ‘기존 3묶음 재구성·새 타일 5개’ 같은 요약. 효과가 끝난 뒤에도 결과를 이해할 수 있게.</td><td>소~중</td></tr>
+<tr><td>3 · 미구현</td><td>테이블·타일 테마 선택</td><td>현재 예배당 테마를 기본으로 밝은 낮·단정한 나무 테마. 숫자·색·기호의 대비와 네트워크 용량을 우선.</td><td>중</td></tr>
+<tr><td>3 · 미구현</td><td>오늘의 퍼즐</td><td>동일한 공개 상황에서 제한된 타일로 완성하기. 먼저 결정적 재현과 퍼즐 검증을 마련한 뒤 추가.</td><td>대</td></tr>
+</tbody></table></div>
+<h2>연출을 조정할 때 지킬 기준</h2>
+<ul><li>보통 놓기는 약 0.3초 안에 끝내고, 입력과 서버 처리를 연출 때문에 지연하지 않습니다.</li><li>강한 강조는 첫 등록·대규모 수·승리에 집중합니다. 흔들리는 화면·전체 플래시·반복 폭발은 추가하지 않습니다.</li><li>남은 장수와 가능한 행동은 항상 읽을 수 있어야 합니다. 장식이 타일이나 터치 영역을 덮으면 조정합니다.</li><li>효과 줄이기, 음소거, 빠른 건너뛰기를 유지합니다. 이동 소리는 취소 후 뒤늦게 나오지 않아야 합니다.</li><li>WebKit·Chrome 자동 검사는 호환성 근거입니다. 최종 음량·저음·진동은 실제 iPhone·Android 스피커와 터치에서 확인해야 합니다.</li></ul>
+<footer>이 검토는 조사와 로컬 구현을 기록합니다. 공개 서버 반영은 v1.2 업로드 폴더를 GitHub에 올린 뒤 Render 배포가 완료되어야 합니다. 게임 규칙을 바꾸는 임의의 점수 보너스·경쟁 우위가 있는 꾸미기 기능은 제안에 포함하지 않았습니다.</footer>
+</main></html>

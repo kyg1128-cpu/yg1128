@@ -33,14 +33,14 @@ const Bot = require('./bot.js');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUB = path.join(__dirname, 'public');
-const MAX_PLAYERS = 4;
+const MAX_PLAYERS = R.MAX_PLAYERS;
 const CHAT = { keep: 60, maxLen: 100, burst: 5, burstMs: 10000, gapMs: 400 };   // 채팅: 보관 개수, 글자 수, 10초에 5개, 최소 간격
 const TIMER_CHOICES = [0, 60, 90, 120, 180];
 const DISCONNECT_GRACE_MS = 45000;   // 타이머가 없을 때 연결 끊긴 사람 차례를 넘기기까지
 const ROOM_IDLE_MS = 3 * 3600 * 1000;
 const BOT = { think: 900, show: 1100, chat: 700 };   // 봇이 생각하는 시간 / 놓는 모습 보여 주는 시간 / 말하기 전 뜸(ms)
 // 봇 이름: key는 화면이 각 언어로 그릴 때 씀(players[].botKey), name은 한국어 대비용
-const BOT_NAMES = [{ key: 'rumi', name: '로봇 루미' }, { key: 'cube', name: '로봇 큐브' }, { key: 'tile', name: '로봇 타일' }, { key: 'joker', name: '로봇 조커' }];
+const BOT_NAMES = [{ key: 'rumi', name: '로봇 루미' }, { key: 'cube', name: '로봇 큐브' }, { key: 'tile', name: '로봇 타일' }, { key: 'joker', name: '로봇 조커' }, { key: 'robot', name: '로봇' }, { key: 'peace', name: '로봇 평화' }];
 const BOT_FALLBACK = { key: 'robot', name: '로봇' };
 
 const rooms = new Map();
@@ -136,7 +136,8 @@ const current = room => room.players[room.turn];
 
 // ---------- 게임 진행 ----------
 function startGame(room) {
-  const pool = Array.from({ length: R.TILE_COUNT }, (_, i) => i);
+  room.deckSize = R.deckSize(room.players.length);
+  const pool = Array.from({ length: room.deckSize }, (_, i) => i);
   for (let i = pool.length - 1; i > 0; i--) {
     const j = crypto.randomInt(i + 1);
     [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -227,7 +228,7 @@ function applyPlay(room, p, r) {
   st.played += r.played.length;
   st.turnsPlayed++;
   st.best = Math.max(st.best, r.played.length);
-  st.jokers += r.played.filter(id => id >= 104).length;
+  st.jokers += r.played.filter(id => R.tile(id).joker).length;
   if (!p.melded) { st.firstMeldTurn = room.turnNo || 0; st.firstMeldValue = r.meldValue; }
   room.table = r.normalized;
   const played = new Set(r.played);
@@ -373,7 +374,7 @@ function view(room, me) {
   const now = Date.now();
   return {
     now,
-    code: room.code, state: room.state, hostId: room.hostId, settings: room.settings,
+    code: room.code, state: room.state, mode: room.mode || 'friends', maxPlayers: MAX_PLAYERS, deckSize: room.state === 'lobby' ? R.deckSize(room.players.length) : room.deckSize || R.STANDARD_TILE_COUNT, hostId: room.hostId, settings: room.settings,
     me: { id: me.id, rack: me.rack, melded: me.melded },
     players: room.players.map(p => ({
       id: p.id, name: p.name, bot: !!p.bot, botKey: botKeyOf(p), level: p.bot ? p.level : undefined, count: p.rack.length, melded: p.melded, score: p.score, connected: p.connected,
@@ -417,7 +418,7 @@ const ERR = {
   serverBusy: () => '서버에 방이 너무 많아요',
   badCode: () => '방 코드를 확인해 주세요',
   alreadyPlaying: () => '이미 게임이 진행 중이에요',
-  roomFull: () => '방이 가득 찼어요 (최대 4명)',
+  roomFull: () => '방이 가득 찼어요 (최대 6명)',
   hostOnly: q => ({ bot: '방장만 봇을 넣을 수 있어요', change: '방장만 바꿀 수 있어요', remove: '방장만 뺄 수 있어요', start: '방장만 시작할 수 있어요' })[q.what],   // what: 'bot'|'change'|'remove'|'start'
   notDuringGame: q => ({ bot: '게임 중에는 넣을 수 없어요', change: '게임 중에는 바꿀 수 없어요', remove: '게임 중에는 뺄 수 없어요' })[q.what],   // what: 'bot'|'change'|'remove'
   emptyMessage: () => '메시지를 입력해 주세요',
@@ -449,7 +450,7 @@ const api = {
   create(b) {
     if (rooms.size > 500) fail('serverBusy');
     const code = newCode();
-    const room = { code, players: [], state: 'lobby', settings: { timer: 0 }, log: [], table: [], chat: [], lastActivity: Date.now() };
+    const room = { code, players: [], state: 'lobby', mode: b.mode === 'practice' ? 'practice' : 'friends', settings: { timer: 0 }, log: [], table: [], chat: [], lastActivity: Date.now() };
     const p = newPlayer(room, b.name);
     room.players.push(p);
     room.hostId = p.id;
