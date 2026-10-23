@@ -14,6 +14,8 @@
 //   'leave'   { who }              게임 중에 who가 나감
 //   'join'    { who }              대기실에 who 입장
 //   'botJoin' { who, level }       봇 참가. level = 'easy' | 'hard'
+//   'botTakeover' { who, why }     대타 봇이 같은 자리를 이어받음. why = 'left' | 'offline'
+//   'playerReturn' { who }        일시 끊김 후 재접속한 사람이 자리를 돌려받음
 //
 // ---------- 오류 ----------
 // 실패한 요청 → HTTP 400 { error: 한국어 문장, code, params }   (code 목록은 아래 ERR 표, 규칙 위반은 code 'rule')
@@ -36,7 +38,7 @@ const PUB = path.join(__dirname, 'public');
 const MAX_PLAYERS = R.MAX_PLAYERS;
 const CHAT = { keep: 60, maxLen: 100, burst: 5, burstMs: 10000, gapMs: 400 };   // 채팅: 보관 개수, 글자 수, 10초에 5개, 최소 간격
 const TIMER_CHOICES = [0, 60, 90, 120, 180];
-const DISCONNECT_GRACE_MS = 45000;   // 타이머가 없을 때 연결 끊긴 사람 차례를 넘기기까지
+const DISCONNECT_GRACE_MS = 45000;   // 일시 끊김은 재접속을 기다린 뒤 대타 봇으로 전환
 const ROOM_IDLE_MS = 3 * 3600 * 1000;
 const BOT = { think: 900, show: 1100, chat: 700 };   // 봇이 생각하는 시간 / 놓는 모습 보여 주는 시간 / 말하기 전 뜸(ms)
 // 봇 이름: key는 화면이 각 언어로 그릴 때 씀(players[].botKey), name은 한국어 대비용
@@ -75,7 +77,7 @@ function newBot(room, level) {
     name: b.name, botKey: b.key, bot: true, level, rack: [], melded: false, score: 0, clients: new Set(), connected: true, disconnectedAt: 0,
   };
 }
-const botKeyOf = p => (p.bot ? p.botKey || BOT_FALLBACK.key : null);
+const botKeyOf = p => (p.bot && !p.takeover ? p.botKey || BOT_FALLBACK.key : null);
 const whoOf = p => ({ name: p.name, botKey: botKeyOf(p) });   // 기록·시상 등에서 '누구'
 
 // 봇 계산은 작업 스레드에서 (어려움 봇이 오래 생각해도 서버가 멈추지 않게). 스레드가 죽으면 기본 전략으로 대신함.
@@ -165,9 +167,9 @@ function beginTurn(room) {
 }
 // 봇 차례: 바로 계산 시작 → (생각하는 척) 최소 시간 채우기 → 놓는 모습 미리 보여 주기 → 확정
 async function botAct(room, seq) {
-  const alive = () => room.state === 'playing' && room.turnSeq === seq && rooms.get(room.code) === room;   // 같은 코드로 새 방이 생겨도 옛 방은 멈춤
+  const p = current(room), epoch = room.botEpoch || 0;
+  const alive = () => room.state === 'playing' && room.turnSeq === seq && rooms.get(room.code) === room && current(room) === p && p.bot && (room.botEpoch || 0) === epoch;
   if (!alive()) return;
-  const p = current(room);
   const until = Date.now() + BOT.think + crypto.randomInt(600);
   const table = await planBot({ table: room.table, rack: p.rack, melded: p.melded, level: p.level });
   if (!alive()) return;
@@ -189,7 +191,7 @@ async function botAct(room, seq) {
 // extra: 봇 말이면 { key, i } — 화면이 자기 언어의 같은 줄(botline.key[i])로 그림. text는 한국어 대비용.
 function pushChat(room, p, text, extra) {
   room.chatSeq = (room.chatSeq || 0) + 1;
-  const msg = { id: room.chatSeq, from: p.id, name: p.name, bot: !!p.bot, botKey: botKeyOf(p), text, at: Date.now(), ...extra };
+  const msg = { id: room.chatSeq, from: p.id, name: p.name, bot: !!p.bot, botKey: botKeyOf(p), text, at: Date.now(), ...extra, ...(p.takeover ? { takeover: p.takeover } : {}) };
   room.chat.push(msg);
   if (room.chat.length > CHAT.keep) room.chat.shift();
   const line = `event: chat\ndata: ${JSON.stringify(msg)}\n\n`;
@@ -342,9 +344,66 @@ function makeAwards(room, winner) {
   }
   return out;
 }
+function handoffHost(room) {
+  if (humans(room).some(p => p.id === room.hostId)) return;
+  const next = humans(room).find(p => p.connected) || humans(room)[0];
+  if (next) room.hostId = next.id;
+}
+function cancelSeatBot(room, p) {
+  if (room.state !== 'playing' || current(room) !== p) return;
+  room.botEpoch = (room.botEpoch || 0) + 1;
+  clearTimeout(room.botTimer);
+  room.preview = null;
+}
+function takeOverSeat(room, p, why) {
+  if (p.bot && p.takeover !== 'offline') return;
+  cancelSeatBot(room, p);
+  p.bot = true;
+  p.takeover = why;
+  p.level = 'easy';
+  p.connected = true;
+  p.disconnectedAt = 0;
+  if (why === 'left') {
+    // Explicit departure revokes every tab. Offline owners retain their secret to return.
+    p.token = crypto.randomBytes(16).toString('hex');
+    for (const res of p.clients) res.end();
+    p.clients.clear();
+  }
+  log(room, 'botTakeover', { who: whoOf(p), why }, `${p.name}님의 자리를 대타 봇이 이어받았어요`);
+  handoffHost(room);
+  if (!room.players.some(q => !q.bot || q.takeover === 'offline')) {
+    clearTimeout(room.botTimer);
+    rooms.delete(room.code);
+    return;
+  }
+  if (current(room) === p) {
+    const seq = room.turnSeq;
+    room.turnStartedAt = Date.now();
+    room.deadline = room.settings.timer ? Date.now() + room.settings.timer * 1000 : 0;
+    room.botTimer = setTimeout(() => botAct(room, seq), 0);
+  }
+}
+function restoreSeat(room, p) {
+  if (p.takeover !== 'offline') return;
+  cancelSeatBot(room, p);
+  p.bot = false;
+  delete p.takeover;
+  delete p.level;
+  p.disconnectedAt = 0;
+  handoffHost(room);
+  if (room.state === 'playing' && current(room) === p) {
+    room.turnStartedAt = Date.now();
+    room.deadline = room.settings.timer ? Date.now() + room.settings.timer * 1000 : 0;
+  }
+  log(room, 'playerReturn', { who: whoOf(p) }, `${p.name}님이 돌아와 직접 플레이해요`);
+}
 function removePlayer(room, p) {
   const idx = room.players.indexOf(p);
   if (idx < 0) return;
+  if (room.state === 'playing' && (!p.bot || p.takeover === 'offline')) {
+    takeOverSeat(room, p, 'left');
+    return;
+  }
   for (const res of p.clients) res.end();
   room.players.splice(idx, 1);
   if (room.state === 'playing') {
@@ -357,18 +416,18 @@ function removePlayer(room, p) {
       else if (idx === room.turn) { room.turn = room.turn % room.players.length; beginTurn(room); }
     }
   }
-  if (room.hostId === p.id && humans(room).length) room.hostId = humans(room)[0].id;
-  if (!humans(room).length) { clearTimeout(room.botTimer); rooms.delete(room.code); }
+  handoffHost(room);
+  if (!room.players.some(q => !q.bot || q.takeover === 'offline')) { clearTimeout(room.botTimer); rooms.delete(room.code); }
 }
 
 // ---------- 상태 전송 (각자 자기 손패만 보임) ----------
-// 연결 끊긴 지 몇 초 (게임 중일 때만) / 타이머 없는 판에서 끊긴 현재 차례 사람이 자동으로 넘어가기까지 남은 초
+// 연결 끊긴 시간 / 대타 봇으로 전환하기까지 남은 초 (차례·턴 타이머와 별개)
 function offFor(room, p, now) {
   return room.state === 'playing' && !p.bot && !p.connected ? Math.max(0, Math.floor((now - p.disconnectedAt) / 1000)) : 0;
 }
 function graceLeft(room, p, now) {
-  if (room.state !== 'playing' || room.deadline || p.bot || p.connected || current(room) !== p) return null;
-  return Math.max(0, Math.ceil((Math.max(p.disconnectedAt, room.turnStartedAt) + DISCONNECT_GRACE_MS - now) / 1000));
+  if (room.state !== 'playing' || p.bot || p.connected) return null;
+  return Math.max(0, Math.ceil((p.disconnectedAt + DISCONNECT_GRACE_MS - now) / 1000));
 }
 function view(room, me) {
   const now = Date.now();
@@ -377,7 +436,7 @@ function view(room, me) {
     code: room.code, state: room.state, mode: room.mode || 'friends', maxPlayers: MAX_PLAYERS, deckSize: room.state === 'lobby' ? R.deckSize(room.players.length) : room.deckSize || R.STANDARD_TILE_COUNT, hostId: room.hostId, settings: room.settings,
     me: { id: me.id, rack: me.rack, melded: me.melded },
     players: room.players.map(p => ({
-      id: p.id, name: p.name, bot: !!p.bot, botKey: botKeyOf(p), level: p.bot ? p.level : undefined, count: p.rack.length, melded: p.melded, score: p.score, connected: p.connected,
+      id: p.id, name: p.name, bot: !!p.bot, botKey: botKeyOf(p), takeover: p.takeover || null, level: p.bot ? p.level : undefined, count: p.rack.length, melded: p.melded, score: p.score, connected: p.connected,
       offFor: offFor(room, p, now), graceLeft: graceLeft(room, p, now),
     })),
     table: room.table, turnId: room.state === 'playing' ? current(room).id : null,
@@ -434,10 +493,10 @@ class Fail extends Error {
 // ko: 예전 문장이 표와 조금 다른 곳에서만 넘김
 const fail = (code, params = {}, ko) => { throw new Fail(ko || ERR[code](params), code, params); };
 
-function auth(body) {
+function auth(body, allowOfflineOwner = false) {
   const room = rooms.get(String(body.room || '').toUpperCase());
   if (!room) fail('roomNotFound');
-  const p = room.players.find(x => !x.bot && x.token === body.token);
+  const p = room.players.find(x => (!x.bot || (allowOfflineOwner && x.takeover === 'offline')) && x.token === body.token);
   if (!p) fail('notMember');
   return { room, p };
 }
@@ -468,7 +527,7 @@ const api = {
     broadcast(room);
     return { room: room.code, token: p.token };
   },
-  hello(b) { auth(b); return {}; },
+  hello(b) { auth(b, true); return {}; },
   addBot(b) {
     const { room, p } = auth(b);
     if (room.hostId !== p.id) fail('hostOnly', { what: 'bot' });
@@ -560,7 +619,7 @@ const api = {
     return {};
   },
   leave(b) {
-    const { room, p } = auth(b);
+    const { room, p } = auth(b, true);
     removePlayer(room, p);
     if (rooms.has(room.code)) broadcast(room);
     return {};
@@ -569,7 +628,7 @@ const api = {
 
 function events(req, res, q) {
   const room = rooms.get(String(q.get('room') || '').toUpperCase());
-  const p = room && room.players.find(x => !x.bot && x.token === q.get('token'));
+  const p = room && room.players.find(x => (!x.bot || x.takeover === 'offline') && x.token === q.get('token'));
   if (!p) { res.writeHead(404); return res.end(); }
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
@@ -579,11 +638,12 @@ function events(req, res, q) {
   res.write(`event: chatlog\ndata: ${JSON.stringify(room.chat)}\n\n`);
   p.clients.add(res);
   p.connected = true;
+  restoreSeat(room, p);
   broadcast(room);
   req.on('close', () => {
     p.clients.delete(res);
-    if (!p.clients.size) { p.connected = false; p.disconnectedAt = Date.now(); }
-    if (rooms.has(room.code)) broadcast(room);
+    if (!p.clients.size && !p.bot) { p.connected = false; p.disconnectedAt = Date.now(); }
+    if (rooms.get(room.code) === room) broadcast(room);
   });
 }
 
@@ -643,11 +703,17 @@ setInterval(() => {
   const now = Date.now();
   for (const room of rooms.values()) {
     if (room.state !== 'playing') continue;
+    let changed = false;
+    for (const seat of room.players) {
+      if (!seat.bot && !seat.connected && now - seat.disconnectedAt >= DISCONNECT_GRACE_MS) {
+        takeOverSeat(room, seat, 'offline');
+        changed = true;
+      }
+    }
+    if (rooms.get(room.code) !== room) continue;
     const p = current(room);
     if (room.deadline && now > room.deadline) { doDraw(room, p, 'timeout'); broadcast(room); }
-    else if (!room.deadline && !p.connected && now - Math.max(p.disconnectedAt, room.turnStartedAt) > DISCONNECT_GRACE_MS) {
-      doDraw(room, p, 'offline'); broadcast(room);
-    } else if (graceLeft(room, p, now) != null) broadcast(room);   // 자동 진행까지 남은 초를 다들 보도록 1초마다
+    else if (changed || room.players.some(seat => graceLeft(room, seat, now) != null)) broadcast(room);
 
   }
 }, 1000);

@@ -776,12 +776,22 @@ async function integration() {
     ok('기록: 시간 초과 뽑기(why timeout)·더미가 비면 패스', () => {});
   }
 
-  // 나가기 → 혼자 남으면 종료
+  // 진행 중 나가기 → 자리를 유지하고 대타 봇이 이어받음
   const bName = nameOf(b.state.me.id);
+  const bSeat = rooms.get(a.room).players.find(p => p.id === b.state.me.id);
+  const bRack = bSeat.rack.slice(), oldPool = rooms.get(a.room).pool.slice();
+  const takeoverBot = require('./server.js').BOT, oldThink = takeoverBot.think;
+  takeoverBot.think = 60000;
   await post('leave', { room: a.room, token: b.token });
-  await until(() => a.state.state === 'ended' && a.state.players.length === 1);
-  assert.deepStrictEqual(a.state.log.find(e => e.k === 'leave'), { k: 'leave', p: { who: human(bName) }, t: `${bName}님이 나갔어요` });
-  ok('나가기 처리 (기록 leave)', () => {});
+  await until(() => a.state.players.some(p => p.id === bSeat.id && p.takeover === 'left'));
+  assert.strictEqual(a.state.state, 'playing');
+  assert.strictEqual(a.state.players.length, 2);
+  assert.deepStrictEqual(bSeat.rack, bRack);
+  assert.deepStrictEqual(rooms.get(a.room).pool, oldPool);
+  assert.deepStrictEqual(a.state.log.find(e => e.k === 'botTakeover'), { k: 'botTakeover', p: { who: human(bName), why: 'left' }, t: `${bName}님의 자리를 대타 봇이 이어받았어요` });
+  await post('leave', { room: a.room, token: a.token });
+  takeoverBot.think = oldThink;
+  ok('나가기 처리: 손패를 보존하고 대타 봇으로 전환', () => {});
 
   a.close(); b.close();
 
@@ -805,14 +815,20 @@ async function integration() {
     gp.disconnectedAt -= 10000; gr.turnStartedAt -= 10000;   // 10초 전에 끊긴 것으로
     await until(() => { const q = go.state.players.find(p => p.id === curId); return q.offFor >= 10 && q.graceLeft <= 35; });   // 1초마다 다시 보냄
     ok('연결 끊김: offFor·graceLeft가 자동 진행까지 줄어듦', () => {});
-    gp.disconnectedAt -= 40000; gr.turnStartedAt -= 40000;   // 50초 전 → 자동으로 뽑고 넘어감
-    const isOff = e => e.k === 'draw' && e.p.why === 'offline';
+    const graceBot = require('./server.js').BOT, savedThink = graceBot.think;
+    graceBot.think = 60000;
+    gp.disconnectedAt -= 40000; gr.turnStartedAt -= 40000;   // 50초 전 → 대타 봇으로 전환
+    const isOff = e => e.k === 'botTakeover' && e.p.why === 'offline';
     await until(() => go.state.log.some(isOff));
-    assert.deepStrictEqual(go.state.log.find(isOff), { k: 'draw', p: { who: human(gp.name), why: 'offline' }, t: `${gp.name}님이 타일을 뽑았어요 (연결 끊김)` });
+    assert.deepStrictEqual(go.state.log.find(isOff), { k: 'botTakeover', p: { who: human(gp.name), why: 'offline' }, t: `${gp.name}님의 자리를 대타 봇이 이어받았어요` });
+    await listen(gc);
+    await until(() => !gp.bot && gp.connected);
+    graceBot.think = savedThink;
     await post('leave', { room: g1.room, token: go.token });
     await post('leave', { room: g1.room, token: gc.token });
     go.close();
-    ok('기록: 연결 끊긴 사람 자동 뽑기(why offline)', () => {});
+    gc.close();
+    ok('연결 끊김 45초 뒤 대타 봇 전환·재접속 복귀', () => {});
   }
 
   // 봇과 한 판: 사람은 계속 뽑기만 해도 게임이 끝까지 진행되어야 함
