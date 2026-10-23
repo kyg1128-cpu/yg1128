@@ -147,7 +147,7 @@ function startGame(room) {
   for (const p of room.players) { p.rack = pool.splice(0, 14); p.melded = false; p.stats = newStats(); }
   Object.assign(room, {
     state: 'playing', pool, table: [], turn: crypto.randomInt(room.players.length),
-    passes: 0, result: null, preview: null, log: [], awards: null, turnNo: 0,
+    passes: 0, result: null, preview: null, lastPlay: null, log: [], awards: null, turnNo: 0,
   });
   room.round = (room.round || 0) + 1;
   log(room, 'start', { round: room.round, who: whoOf(current(room)) }, `${room.round}번째 게임 시작! ${current(room).name}님부터`);
@@ -221,6 +221,13 @@ const BOT_LINES = {
 };
 
 function applyPlay(room, p, r) {
+  const diff = R.tableDiff(room.table, r.normalized);
+  room.playSeq = (room.playSeq || 0) + 1;
+  // Only committed, publicly visible sets. Never include an opponent's rack or draft.
+  room.lastPlay = { id: room.playSeq, round: room.round, actor: p.id, name: p.name,
+    botKey: botKeyOf(p), takeover: p.takeover || null, placed: r.played.slice(),
+    sets: diff.added.map(i => r.normalized[i].slice()), firstMeld: !p.melded,
+    meldValue: !p.melded ? r.meldValue : null, at: Date.now() };
   // 기록: 다시 짠 묶음 수 = 이전 테이블 묶음 중 새 테이블에서 쪼개지거나 섞인 것
   // (그대로 남았거나 끝에 붙여 늘리기만 한 묶음 = 타일이 전부 한 묶음 안에 그대로 있으면 세지 않음)
   const st = statsOf(p);
@@ -441,7 +448,7 @@ function view(room, me) {
     })),
     table: room.table, turnId: room.state === 'playing' ? current(room).id : null,
     turnSeq: room.turnSeq || 0, deadline: room.deadline || 0,
-    pool: room.pool ? room.pool.length : 0, preview: room.preview, log: room.log.slice(-8),
+    pool: room.pool ? room.pool.length : 0, preview: room.preview, lastPlay: room.lastPlay || null, log: room.log.slice(-8),
     result: room.result, round: room.round || 0,
     awards: room.state === 'ended' ? room.awards || null : null, history: room.history || [],
   };
@@ -485,6 +492,8 @@ const ERR = {
   botNotFound: () => '봇을 찾을 수 없어요',
   badLevel: () => '난이도를 확인해 주세요',
   needTwo: () => '2명 이상이어야 시작할 수 있어요',
+  badName: () => '닉네임을 입력해 주세요 (최대 12자)',
+  renameLobbyOnly: () => '닉네임은 시작 전 대기실에서 바꿀 수 있어요',
   // 'rule': 규칙 위반 — 한국어 문장은 checkPlay의 reason, params = { rule: checkPlay code, ...checkPlay params }
 };
 class Fail extends Error {
@@ -528,6 +537,18 @@ const api = {
     return { room: room.code, token: p.token };
   },
   hello(b) { auth(b, true); return {}; },
+  rename(b) {
+    const { room, p } = auth(b);
+    if (room.state !== 'lobby') fail('renameLobbyOnly');
+    if (typeof b.name !== 'string' || !b.name.replace(/[\u0000-\u001f<>\u007f\u2028\u2029]/g, '').trim()) fail('badName');
+    const base = cleanName(b.name.replace(/[\u007f\u2028\u2029]/g, ''));
+    let name = base, suffix = 2;
+    while (room.players.some(q => q !== p && q.name === name)) {
+      const tail = String(suffix++); name = base.slice(0, 12 - tail.length) + tail;
+    }
+    if (p.name !== name) { const from = p.name; p.name = name; log(room, 'rename', { from, to: name }, `${from} → ${name}`); broadcast(room); }
+    return { name: p.name };
+  },
   addBot(b) {
     const { room, p } = auth(b);
     if (room.hostId !== p.id) fail('hostOnly', { what: 'bot' });
