@@ -17,6 +17,17 @@
   const cap = w => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w);   // English: 문장 첫 글자
 
   const KO = {
+    'lobby.nickname': '내 닉네임', 'lobby.nameEdit': '수정', 'lobby.nameSave': '저장', 'lobby.nameCancel': '취소',
+    'lobby.nameSaved': '닉네임을 바꿨어요: {name}',
+    'err.badName': '닉네임을 입력해 주세요 (최대 12자)', 'err.renameLobbyOnly': '닉네임은 시작 전 대기실에서 바꿀 수 있어요',
+    'log.rename': '{from} → {to} · 닉네임 변경',
+    'move.recent': '지난 수', 'move.close': '지난 수 닫기', 'move.prev': '이전 수', 'move.next': '다음 수',
+    'move.gold': '금빛 테두리 = 이번에 낸 타일', 'move.played': '{n}장 내려놓음',
+    'move.first': '첫 등록 · {v}점', 'move.group': '그룹', 'move.run': '런', 'move.count': '{n}개 조합',
+    'music.title': '테이블 BGM', 'music.volume': 'BGM 크기', 'music.on': '켜짐', 'music.off': '꺼짐',
+    'music.quickOn': 'BGM 켜짐', 'music.quickOff': 'BGM 꺼짐',
+    'music.hint': '잔잔한 피아노와 마림바 · 이 기기에만 저장돼요',
+    'music.muted': '음소거 중',
     'ux.keys': '방향키 이동 · Enter 선택 · Esc 해제',
     'ux.rack': '내 타일',
     'ux.hand': "내 타일 {n}장",
@@ -347,6 +358,17 @@
   };
 
   const EN = {
+    'lobby.nickname': 'Your nickname', 'lobby.nameEdit': 'Edit', 'lobby.nameSave': 'Save', 'lobby.nameCancel': 'Cancel',
+    'lobby.nameSaved': 'Nickname changed to {name}',
+    'err.badName': 'Enter a nickname (up to 12 characters)', 'err.renameLobbyOnly': 'Change your nickname in the lobby before the game starts',
+    'log.rename': '{from} → {to} · nickname changed',
+    'move.recent': 'Last plays', 'move.close': 'Close last play', 'move.prev': 'Previous play', 'move.next': 'Next play',
+    'move.gold': 'Gold border = newly played tile', 'move.played': '{n} tiles played',
+    'move.first': 'First meld · {v} points', 'move.group': 'Group', 'move.run': 'Run', 'move.count': '{n} sets',
+    'music.title': 'Table music', 'music.volume': 'Music volume', 'music.on': 'On', 'music.off': 'Off',
+    'music.quickOn': 'Music on', 'music.quickOff': 'Music off',
+    'music.hint': 'Soft piano and marimba · saved on this device',
+    'music.muted': 'Sound muted',
     'ux.keys': 'Arrow keys to move · Enter to select · Esc to clear',
     'ux.rack': 'Your tiles',
     'ux.hand': '{n} tiles in hand',

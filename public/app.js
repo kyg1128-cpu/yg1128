@@ -135,6 +135,9 @@ function connect() {
   };
 }
 function leaveLocal() {
+  if (window.TableSocial) TableSocial.clear();
+  clearTimeout(bubbleTimer); $('#chatBubble').classList.add('hidden');
+  $('#nicknameForm').classList.add('hidden');
   if (window.UX) UX.connection('idle');
   if (window.TileMotion) TileMotion.clear();
   finishReveal(false);   // 연출 중에 방이 사라져도 칩·배너가 처음 화면에 남지 않게
@@ -153,6 +156,8 @@ function leaveLocal() {
 function show(id) {
   for (const s of ['home', 'lobby', 'game']) $('#' + s).classList.toggle('hidden', s !== id);
   lastScreen = id;
+  document.body.dataset.screen = id;
+  if (window.TableMusic) TableMusic.setScene(id);
 }
 let toastTimer;
 function toast(msg) {
@@ -404,6 +409,7 @@ function onState(s) {
   graceAt = cur && !cur.connected && Number.isFinite(cur.graceLeft) ? { id: cur.id, until: Date.now() + cur.graceLeft * 1000 } : null;
   if (firstState) renderChat();   // 내 메시지 표시(오른쪽 정렬)는 내 id를 안 다음에야 가능
   render();
+  if (window.TableSocial) TableSocial.sync(S, firstState || newRound);
   if(change && change.me && change.drew && newDraw.size && S.state==='playing' && window.TableFeel)TableFeel.draw([...newDraw]);
   if (RV && !RV.started) runReveal();
 }
@@ -468,7 +474,7 @@ function mountChat() {
     chatPanel.className = 'chat sheet' + (chatOpen && lastScreen === 'game' ? '' : ' hidden');
   }
   document.body.classList.toggle('chat-open', chatOpen && lastScreen === 'game');   // 넓은 화면: 테이블이 채팅 창 옆으로 비켜 섬 (style.css)
-  if (chatVisible()) { markSeen(); $('#chatBubble').classList.add('hidden'); }
+  if (chatVisible()) markSeen();
   updateBadge();
 }
 function openChat(open, focusBack) {
@@ -512,18 +518,24 @@ function onChat(m) {
   const mine = S && m.from === S.me.id;
   if (nearBottom || mine) list.scrollTop = list.scrollHeight;
   if (chatVisible()) markSeen();
-  else if (!mine) { showBubble(m); chime(); }
+  if (lastScreen === 'game') showBubble(m);
+  if (!mine && !chatVisible()) chime();
   updateBadge();
 }
 function showBubble(m) {
   if (lastScreen !== 'game') return;
   const b = $('#chatBubble');
-  b.replaceChildren(el('b', '', (m.bot ? '🤖' : '') + chatName(m)), document.createTextNode(chatText(m)));
+  const mine = S && m.from === S.me.id;
+  b.classList.toggle('mine', !!mine);
+  const avatar = el('span', 'talk-avatar', m.bot ? '◇' : [...chatName(m)][0] || '·');
+  const words = el('span', 'talk-words');
+  words.append(el('b', '', chatName(m) + (mine ? ' · ' + tx('chip.me') : '')), el('span', 'talk-text', chatText(m)));
+  b.replaceChildren(avatar, words);
   b.style.top = Math.round($('#status').getBoundingClientRect().bottom + 8) + 'px';   // 차례 안내줄을 가리지 않게 그 아래에
   b.classList.toggle('pass', isMyTurn());   // 내 차례: 말풍선 아래 '＋새 묶음'을 누르려던 탭이 채팅으로 새지 않게
   b.classList.remove('hidden');
   clearTimeout(bubbleTimer);
-  bubbleTimer = setTimeout(() => b.classList.add('hidden'), 4000);
+  bubbleTimer = setTimeout(() => b.classList.add('hidden'), Math.min(9500, 5000 + String(m.text || '').length * 35));
 }
 function chime() {
   if (window.Sfx) return Sfx.play('chat');   // 소리 모드(소리·진동/진동만/끔)를 따름
@@ -612,6 +624,12 @@ function renderLobby() {
     li.append(el('span', 'player-name', (p.bot ? '🤖 ' : '') + displayName(p)));
     if (p.id === S.hostId) li.append(el('span', 'tag', tx('lobby.host')));
     if (p.id === S.me.id && !isSelfName(p.name)) li.append(el('span', 'muted', tx('me.tag')));
+    if (p.id === S.me.id) {
+      const edit = el('button', 'name-edit', tx('lobby.nameEdit'));
+      edit.type = 'button'; edit.disabled = lobbyRequest;
+      edit.onclick = () => { const form = $('#nicknameForm'); form.classList.remove('hidden'); $('#lobbyNickname').value = p.name; $('#nicknameError').textContent = ''; $('#lobbyNickname').focus(); $('#lobbyNickname').select(); };
+      li.append(edit);
+    }
     li.append(el('span', 'grow'));
     if (p.bot) {
       const lv = el('button', 'lv ' + p.level, levelName(p.level));
@@ -1283,6 +1301,7 @@ $('#btnSound').onclick = () => {
   soundLabel();
 };
 soundLabel();
+addEventListener('rummi-audio', soundLabel);
 
 $('#btnSortNum').onclick = () => { sortRack('num'); sfx('sort'); render(); };
 $('#btnSortColor').onclick = () => { sortRack('color'); sfx('sort'); render(); };
@@ -1357,6 +1376,7 @@ setInterval(tick, 500);
 // 고정 글자·aria·placeholder는 i18n.js가 [data-i18n…]로 이미 바꿈 → 여기선 코드로 만든 글자만
 if (window.I18N) I18N.on(() => {
   cancelRevealForLayout();
+  clearTimeout(bubbleTimer); $('#chatBubble').classList.add('hidden');
   buildQuick();
   jokerLabels();
   soundLabel();

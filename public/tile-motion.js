@@ -62,7 +62,7 @@
           t.classList.add('motion-arrived');setTimeout(()=>t.classList.remove('motion-arrived'),350);
           if(window.TableFeel)TableFeel.land(t,{impact});
           if(contact && window.Sfx) {
-            Sfx.play('settle',{step:i,quiet:true,buzz:false});
+            Sfx.play('settle',{step:i,quiet:!buzz,buzz:false});
             if(buzz)Sfx.buzz('place');
           }
         }

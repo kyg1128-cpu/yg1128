@@ -36,7 +36,7 @@
     if(saved!=null && Number.isFinite(Number(saved)))volume=Math.max(0,Math.min(1,Number(saved)));
   } catch(e) {}
   const clock = () => (root.performance && root.performance.now ? root.performance.now() : Date.now());
-  let ctx = null, master = null, noiseBuf = null, gestureAt = -1e9;
+  let ctx = null, master = null, destination = null, noiseBuf = null, gestureAt = -1e9;
   const voices = [];                      // { g, end }
   const lastAt = Object.create(null);     // 이름별 마지막 재생 시각(같은 소리 30ms 안에 두 번 안 냄)
 
@@ -55,6 +55,7 @@
           master.connect(comp); out = comp;
         }
         out.connect(ctx.destination);
+        destination = out;
       } catch (e) { ctx = null; return null; }
     }
     // iOS는 전화·Siri·화면 잠금 뒤에 'interrupted' 상태가 되므로 그때도 다시 깨움
@@ -145,14 +146,23 @@
     o.start(t); o.stop(t + dur + 0.03);
   }
   const P = i => PENTA[Math.max(0, Math.min(PENTA.length - 1, Math.round(Number(i) || 0)))];
+  // Dry ceramic contact: sharp edge, a tiny secondary contact and a short wooden body.
+  // The high-frequency transient stays audible on phone speakers without a long metallic ring.
+  function clack(out,t,step=0,strength=1) {
+    hiss(out,t,.006,3300+(step%3)*130,1.1,1.35*strength);
+    hiss(out,t+.009,.009,2050,1.8,.67*strength);
+    thump(out,LOW.A3,t,.048,.58*strength);
+    tone(out,P(5)*2.76,t+.001,.038,.085*strength,.001);
+    hiss(out,t+.025,.014,900,.8,.15*strength);
+  }
 
   // 소리 사전 — 각 함수는 길이(초)를 돌려줌
   const SOUNDS = {
     pick(o, t) { hiss(o, t, 0.015, 2150, 1.2, 0.36); thump(o, LOW.A3, t, 0.045, 0.18); tone(o, P(0), t, 0.065, 0.025, 0.002); return 0.09; },
     place(o, t) { hiss(o, t, 0.045, 1200, 0.8, 0.12, 2200); return 0.07; },
     // 착지 시의 짧은 타일 접촉음. 이동 시작음·화음보다 작고 건조하게.
-    settle(o, t, s) { hiss(o, t, 0.009, 3100 + (s % 3) * 110, 1.7, 0.62); thump(o, LOW.A3, t, 0.075, 0.4); tone(o, P(1), t + .003, .11, .035, .002); hiss(o, t + 0.018, 0.012, 1500, 0.9, 0.13); return 0.14; },
-    rack(o,t) { hiss(o,t,.012,1800,1,.4);thump(o,LOW.E3,t,.095,.44);hiss(o,t+.022,.018,750,.8,.14);return .14; },
+    settle(o, t, s) { clack(o,t,s);return .11; },
+    rack(o,t) { clack(o,t,0,.72);thump(o,LOW.E3,t+.004,.075,.32);return .12; },
     back(o, t) { thump(o, LOW.E3, t, 0.14, 0.45); return 0.17; },
     sort(o, t) {
       for (let i = 0; i < 4; i++) {
@@ -167,7 +177,7 @@
     draw(o, t) { hiss(o,t,.09,850,.8,.3,1650);hiss(o,t+.05,.015,2600,1.4,.32);thump(o,LOW.A3,t+.045,.05,.16);return .14; },
     turn(o, t) { bell(o, P(1), t, 0.65, 0.13); bell(o, P(3), t + 0.1, .75, 0.11); return .9; },
     next(o, t) { bell(o, P(2), t, 0.6, 0.1); return 0.65; },
-    commit(o, t, s) { hiss(o, t, 0.014, 2400 + (s % 3) * 150, 1.3, 0.28); thump(o, LOW.A3, t, 0.06, 0.18); tone(o, P(s), t + 0.025, 0.4, 0.14, 0.004); tone(o, P(s+2), t + 0.065, 0.45, 0.07, 0.004); return 0.54; },
+    commit(o, t, s) { clack(o,t,s,.9);tone(o,P(s),t+.06,.28,.095,.004);tone(o,P(s+2),t+.10,.35,.045,.004);return .48; },
     joker(o, t) {   // 종소리 + 살짝 어긋난 한 옥타브 위 두 음이 반짝이며 맥놀이
       bell(o, P(5), t, 0.9, 0.17);
       tone(o, P(5) * 2 * 1.006, t + 0.03, 0.85, 0.045, 0.02);
@@ -211,7 +221,7 @@
       const t = c.currentTime + 0.005;
       // 길이를 미리 알기 위해 임시 출력에 먼저 연결하지 않고, 넉넉한 길이로 목소리를 잡음
       const g = voice(2.4);
-      if (opts && opts.quiet) g.gain.value = 0.45;
+      if (opts && opts.quiet) g.gain.value = name==='settle'||name==='rack' ? 0.78 : 0.45;
       const dur = fn(g, t, step);
       voices[voices.length - 1].end = c.currentTime + dur;
       return true;
@@ -225,6 +235,7 @@
     try { if (store) store.setItem(KEY, m); } catch (e) {}
     if (m === 'on') { audio(); play('next', { buzz: false }); }
     else if (m === 'buzz') buzz(HAPTIC.turn);
+    try { if(root.dispatchEvent && root.Event)root.dispatchEvent(new root.Event('rummi-audio')); } catch {}
     return mode;
   }
   const cycle = () => {   // 진동이 없는 기기에선 '진동만'을 건너뜀
@@ -243,6 +254,10 @@
 
   return {
     play, buzz, setMode, cycle, setVolume,
+    musicBus(fromGesture=false) {
+      const c=audio(fromGesture);if(!c || !destination)return null;
+      const gain=c.createGain();gain.gain.value=0;gain.connect(destination);return {context:c,gain};
+    },
     get volume() { return volume; },
     get mode() { return mode; },
     get canBuzz() { return CAN_BUZZ; },

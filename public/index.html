@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="modern.css">
 <link rel="stylesheet" href="table-feel.css">
 <link rel="stylesheet" href="atelier.css">
+<link rel="stylesheet" href="table-social.css">
 </head>
 <body>
 <!-- 조커 문양 (그림 문자 대신 SVG: 기기마다 똑같이 보이게). 기본은 십자가 -->
@@ -96,6 +97,11 @@
         <p id="lobbySubtitle" class="muted"></p>
       </div>
       <h3><span data-i18n="lobby.players">참가자</span> <span id="lobbyCount"></span></h3>
+      <form id="nicknameForm" class="nickname-form hidden" autocomplete="off">
+        <label for="lobbyNickname" data-i18n="lobby.nickname">내 닉네임</label>
+        <div class="nickname-fields"><input id="lobbyNickname" maxlength="12" enterkeyhint="done" data-i18n-aria="lobby.nickname" aria-label="내 닉네임"><button id="btnNicknameSave" class="primary" type="submit" data-i18n="lobby.nameSave">저장</button><button id="btnNicknameCancel" type="button" data-i18n="lobby.nameCancel">취소</button></div>
+        <small id="nicknameError" role="status"></small>
+      </form>
       <ul id="lobbyPlayers" class="plist"></ul>
       <p id="lobbyDeck" class="muted deck-note"></p>
       <div id="botSetup" class="bot-setup" aria-labelledby="botSetupTitle">
@@ -132,7 +138,7 @@
     <div class="meta"><span class="pool-meta"><span class="stock" aria-hidden="true"><i></i><i></i><i></i></span><span id="poolCount"></span></span><span id="clock"></span><button id="btnChat" class="ghost small" title="채팅" aria-label="채팅" data-i18n-title="game.chat" data-i18n-aria="game.chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 1-8 8H8l-5 3v-7a8 8 0 1 1 17-4Z"/><path d="M7 10h10M7 14h6"/></svg><span id="chatBadge" class="badge hidden"></span></button><button id="btnRules" class="ghost small" title="규칙 한눈에" aria-label="규칙 한눈에" data-i18n-title="game.rules" data-i18n-aria="game.rules">?</button><button id="btnMenu" class="ghost small" title="메뉴" aria-label="메뉴" data-i18n-title="game.menu" data-i18n-aria="game.menu">⋯</button></div>
   </header>
   <div class="connection-note hidden" data-connection role="status"></div>
-  <div id="status" class="status" aria-live="polite" aria-atomic="true"></div>
+  <div class="turn-line"><div id="status" class="status" aria-live="polite" aria-atomic="true"></div><button id="btnLastPlay" class="recent-trigger hidden" type="button" data-i18n="move.recent">지난 수</button></div>
   <div id="coach" class="coach hidden" role="status"></div>
   <main id="table" class="table"></main>
   <div id="log" class="log"></div>
@@ -191,6 +197,7 @@
     <button id="btnShare2" data-i18n="lobby.share">초대 링크 복사</button>
     <button id="btnSound">소리 켜짐</button>
     <label class="volume-control" for="effectVolume"><span><span data-i18n="pref.volume">효과음 크기</span><output id="effectVolumeValue" for="effectVolume">50%</output></span><input id="effectVolume" type="range" min="0" max="100" step="5" value="50"></label>
+    <div class="music-settings"><button type="button" id="btnMusic" role="switch" aria-checked="true"><span data-i18n="music.title">테이블 BGM</span><span id="musicState"></span></button><label class="volume-control" for="musicVolume"><span><span data-i18n="music.volume">BGM 크기</span><output id="musicVolumeValue" for="musicVolume">18%</output></span><input id="musicVolume" type="range" min="0" max="60" step="2" value="18"></label><small data-i18n="music.hint">잔잔한 피아노와 마림바 · 이 기기에만 저장돼요</small></div>
     <section class="prefs" aria-labelledby="prefsH">
       <h4 id="prefsH" data-i18n="menu.prefs">내 화면 설정</h4>
       <div class="lang-switch" data-i18n-aria="lang.label" aria-label="언어"></div>
@@ -218,6 +225,12 @@
   </form>
 </section>
 <div id="chatBubble" class="chat-bubble hidden" role="status"></div>
+<aside id="movePeek" class="move-peek hidden" aria-label="지난 수" data-i18n-aria="move.recent">
+  <header><div><small id="movePeekKicker"></small><b id="movePeekWho"></b></div><button id="btnPeekClose" type="button" class="ghost small" data-i18n-aria="move.close" aria-label="지난 수 닫기">✕</button></header>
+  <div id="movePeekSets" class="move-peek-sets"></div>
+  <footer><span data-i18n="move.gold">금빛 테두리 = 이번에 낸 타일</span><span class="move-pages"><button id="btnPeekPrev" type="button" data-i18n-aria="move.prev" aria-label="이전 수">‹</button><span id="movePeekPage"></span><button id="btnPeekNext" type="button" data-i18n-aria="move.next" aria-label="다음 수">›</button></span></footer>
+</aside>
+<button id="btnMusicQuick" class="music-quick" type="button" role="switch" aria-checked="true"><span aria-hidden="true">♫</span><span id="musicQuickLabel"></span></button>
 
 <!-- TV로 보기: 목장 모임에서 프로젝터·TV에 띄워 두기 (누르면 닫힘) -->
 <div id="tv" class="tv hidden" role="dialog" aria-modal="true" aria-label="TV로 보기 — 누르면 닫혀요" data-i18n-aria="tv.aria" tabindex="-1">
@@ -243,9 +256,11 @@
 <script src="qr.js"></script>
 <script src="sfx.js"></script>
 <script src="i18n.js"></script>
+<script src="music.js"></script>
 <script src="table-feel.js"></script>
 <script src="tile-motion.js"></script>
 <script src="app.js"></script>
+<script src="table-social.js"></script>
 <script src="flow.js"></script>
 <script src="ux.js"></script>
 </body>
