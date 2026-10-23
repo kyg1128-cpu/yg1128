@@ -23,8 +23,9 @@ const BOT_KEYS = { '로봇 루미': 'rumi', '로봇 큐브': 'cube', '로봇 타
 const isSelfName = n => n === '나' || n === 'Me';   // 이름 없이 혼자 연습할 때 쓰는 이름
 function botKeyOf(x) {
   if (!x) return null;
-  if (x.botKey) return x.botKey;
   const p = x.id && S && S.players ? S.players.find(q => q.id === x.id) : null;
+  if (x.takeover || (p && p.takeover)) return null;
+  if (x.botKey) return x.botKey;
   if (p && p.botKey) return p.botKey;
   return (x.bot || (p && p.bot)) && owns(BOT_KEYS, String(x.name)) ? BOT_KEYS[x.name] : null;
 }
@@ -400,7 +401,7 @@ function onState(s) {
   }
   watchSeats(firstState);
   const cur = S.state === 'playing' && S.players.find(p => p.id === S.turnId);
-  graceAt = cur && !cur.connected && !S.deadline && Number.isFinite(cur.graceLeft) ? { id: cur.id, until: Date.now() + cur.graceLeft * 1000 } : null;
+  graceAt = cur && !cur.connected && Number.isFinite(cur.graceLeft) ? { id: cur.id, until: Date.now() + cur.graceLeft * 1000 } : null;
   if (firstState) renderChat();   // 내 메시지 표시(오른쪽 정렬)는 내 id를 안 다음에야 가능
   render();
   if(change && change.me && change.drew && newDraw.size && S.state==='playing' && window.TableFeel)TableFeel.draw([...newDraw]);
@@ -435,7 +436,7 @@ function updateBadge() {
   }
   $('#btnChat').setAttribute('aria-label', n ? tx('game.chatUnread', { n }) : tx('game.chat'));
 }
-const chatName = m => displayName({ id: m.from, name: m.name, bot: m.bot, botKey: m.botKey });
+const chatName = m => displayName({ id: m.from, name: m.name, bot: m.bot, botKey: m.botKey, takeover: m.takeover });
 function msgEl(m) {
   const li = el('li', 'msg' + (S && m.from === S.me.id ? ' mine' : '') + (m.bot ? ' bot' : ''));
   li.append(el('div', 'who', (m.bot ? '🤖 ' : '') + chatName(m)), el('div', 'txt', chatText(m)));
@@ -723,7 +724,7 @@ function renderGame() {
   for (const p of S.players) {
     const turn = p.id === S.turnId;
     const danger = playing && p.count <= 2;
-    const c = el('div', 'pchip' + (turn ? ' turn' : '') + (p.connected ? '' : ' off') + (danger ? ' danger' : ''));
+    const c = el('div', 'pchip' + (turn ? ' turn' : '') + (p.connected ? '' : ' off') + (danger ? ' danger' : '') + (p.takeover ? ' substitute' : ''));
     if (!p.connected) c.append(el('span', 'offi', '📵'));
     const l1 = el('span', 'l1');   // 첫 줄: 이름 · 장수 · 등록 전 · 다음 (둘째 줄 .sub는 이 폭에 맞춰짐)
     c.append(l1);
@@ -734,6 +735,7 @@ function renderGame() {
     l1.append(b);
     const tips = [];
     if (p.bot) tips.push(tx('chip.botTip', { level: levelName(p.level) }));
+    if (p.takeover) tips.push(tx('chip.substituteTip.' + p.takeover));
     l1.append(el('span', 'cnt', danger ? tx('chip.danger', { n: p.count }) : String(p.count)));
     if (!p.melded && playing) {
       tips.push(tx('chip.preTip'));
@@ -744,9 +746,9 @@ function renderGame() {
     if (p.id === nextId) l1.append(el('span', 'nx', tx('chip.next')));
     if (playing && turn) {
       if (graceAt && graceAt.id === p.id) c.append(el('span', 'sub grace', tx('chip.grace', { s: Math.max(0, Math.ceil((graceAt.until - Date.now()) / 1000)) })));
-      else if (p.bot && S.preview) c.append(el('span', 'sub', tx('chip.placing')));
+      else if (p.bot && S.preview) c.append(el('span', 'sub', p.takeover ? tx('chip.substitutePlacing') : tx('chip.placing')));
       else if (p.bot) {
-        const s = el('span', 'sub', tx('chip.thinking'));
+        const s = el('span', 'sub', p.takeover ? tx('chip.substituteThinking') : tx('chip.thinking'));
         const dots = el('span', 'dots');
         dots.append(el('i', '', '.'), el('i', '', '.'), el('i', '', '.'));
         s.append(dots);
@@ -754,6 +756,7 @@ function renderGame() {
         c.append(s);
       }
     }
+    if (p.takeover && !(playing && turn)) c.append(el('span', 'sub standin-label', tx('chip.substitute')));
     if (!p.connected) tips.push(tx('chip.offTip'));
     if (chipPulse && chipPulse.id === p.id && Date.now() - chipPulse.at < 900) {
       const plus = el('span', 'plus1', '+1');

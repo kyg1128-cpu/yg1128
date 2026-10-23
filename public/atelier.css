@@ -39,6 +39,11 @@ input:focus-visible,select:focus-visible,.card input:focus-visible,.card select:
 .lang-switch { background:#e7e8dc; border:1px solid #d8dbcd; border-radius:10px; }
 .lang-switch button { box-shadow:none; border-radius:7px; }
 .lang-switch button[aria-pressed="true"] { background:#fffdf6; box-shadow:0 1px 4px #3d47321a; }
+.credits { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:3px 12px; margin:14px 0 0; padding-top:11px; border-top:1px solid #d5d5bf; color:#73755f; font-size:11px; line-height:1.6; font-weight:400; }
+.credits b { color:#505f48; font-weight:650; }.credits a { color:#647052; text-decoration:underline; text-decoration-color:#adb395; text-underline-offset:3px; overflow-wrap:anywhere; }
+.credits a:hover { color:#284e40; }.credits a:focus-visible { outline:2px solid #536d44;outline-offset:3px; }
+.takeover-hint { margin:4px 0 8px; color:#73755f;font-size:11px;line-height:1.5; }
+.pchip.substitute { border-style:dashed; border-color:#a4b18c80; }.pchip .standin-label { color:#e0d6a6; }
 #home .verse blockquote,.verse blockquote { color:#70725e; }
 #lobby .card,#lobby.practice-lobby .card { border-radius:22px; box-shadow:0 18px 60px #4a432a12; }
 .bot-setup { background:#f0f0e5; border-color:#d7dacb; border-radius:12px; }
