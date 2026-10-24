@@ -494,6 +494,11 @@ const ERR = {
   needTwo: () => '2명 이상이어야 시작할 수 있어요',
   badName: () => '닉네임을 입력해 주세요 (최대 12자)',
   renameLobbyOnly: () => '닉네임은 시작 전 대기실에서 바꿀 수 있어요',
+  kickHostOnly: () => '방장만 참가자를 내보낼 수 있어요',
+  kickLobbyOnly: () => '참가자 강퇴는 게임 시작 전 대기실에서만 가능해요',
+  playerNotFound: () => '해당 참가자가 이미 나갔어요',
+  cannotKickSelf: () => '본인은 강퇴할 수 없어요. 방 나가기를 이용해 주세요',
+  kickHumansOnly: () => '컴퓨터 상대는 봇 빼기로 제거해 주세요',
   // 'rule': 규칙 위반 — 한국어 문장은 checkPlay의 reason, params = { rule: checkPlay code, ...checkPlay params }
 };
 class Fail extends Error {
@@ -506,7 +511,7 @@ function auth(body, allowOfflineOwner = false) {
   const room = rooms.get(String(body.room || '').toUpperCase());
   if (!room) fail('roomNotFound');
   const p = room.players.find(x => (!x.bot || (allowOfflineOwner && x.takeover === 'offline')) && x.token === body.token);
-  if (!p) fail('notMember');
+  if (!p) fail('notMember', room.kickedTokens?.has(body.token) ? { reason: 'kicked' } : {});
   return { room, p };
 }
 function myTurn(room, p) {
@@ -537,6 +542,25 @@ const api = {
     return { room: room.code, token: p.token };
   },
   hello(b) { auth(b, true); return {}; },
+  kick(b) {
+    const { room, p } = auth(b);
+    if (room.hostId !== p.id) fail('kickHostOnly');
+    if (room.state !== 'lobby') fail('kickLobbyOnly');
+    const target = room.players.find(q => q.id === b.playerId);
+    if (!target) fail('playerNotFound');
+    if (target === p) fail('cannotKickSelf');
+    if (target.bot) fail('kickHumansOnly');
+    // Keep a bounded private reason for stale sessions, never a device/IP ban.
+    if (!room.kickedTokens) room.kickedTokens = new Set();
+    room.kickedTokens.add(target.token);
+    while (room.kickedTokens.size > 32) room.kickedTokens.delete(room.kickedTokens.values().next().value);
+    for (const res of target.clients) res.write('event: removed\ndata: {"reason":"kicked"}\n\n');
+    removePlayer(room, target);
+    target.clients.clear();
+    log(room, 'kick', { who: whoOf(target) }, `방장이 ${target.name}님을 내보냈어요`);
+    broadcast(room);
+    return {};
+  },
   rename(b) {
     const { room, p } = auth(b);
     if (room.state !== 'lobby') fail('renameLobbyOnly');
