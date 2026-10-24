@@ -117,7 +117,7 @@ ok('explain: 장수 부족·조커만', () => {
 ok('explain: 그룹 4장 초과·같은 색 겹침', () => {
   assert.strictEqual(R.explain([T(0, 5), T(1, 5), T(2, 5), T(3, 5), J1]), '그룹은 4장까지예요');
   assert.strictEqual(R.explain([T(0, 5), T(0, 5, 1), T(3, 5)]), '같은 색이 겹쳐요 (빨강 5)');
-  assert.strictEqual(R.explain([T(2, 9), T(1, 9), J1, T(2, 9, 1)]), '같은 색이 겹쳐요 (주황 9)');
+  assert.strictEqual(R.explain([T(2, 9), T(1, 9), J1, T(2, 9, 1)]), '같은 색이 겹쳐요 (노랑 9)');
 });
 ok('explain: 런 숫자 중복(이/가)·사이 빔', () => {
   assert.strictEqual(R.explain([T(1, 6), T(1, 6, 1), T(1, 7)]), '파랑 6이 두 장이에요');
@@ -519,7 +519,7 @@ async function integration() {
           if (data == null) continue;
           if (ev === 'chatlog') s.chat = data;
           else if (ev === 'chat') (s.chat = s.chat || []).push(data);
-          else s.state = data;
+          else if (ev === 'message') s.state = data;
         }
       }
     })().catch(() => {});
@@ -589,6 +589,8 @@ async function integration() {
     }
     assert.strictEqual(seen.size,seats,'끝자리까지 차례가 한 번씩 돌아옴');
     for(const p of people) await post('leave',{room:host.room,token:p.token});
+    assert.ok(rooms.has(host.room) && room.emptySince, '모두 나가도 재입장할 방 보존');
+    clearTimeout(room.botTimer); rooms.delete(host.room);
     host.close();
     ok(`${seats}명 온라인: 확장 160개·각 14개·차례 순환·손패 비공개`,()=>{});
   }
@@ -789,7 +791,20 @@ async function integration() {
   assert.deepStrictEqual(bSeat.rack, bRack);
   assert.deepStrictEqual(rooms.get(a.room).pool, oldPool);
   assert.deepStrictEqual(a.state.log.find(e => e.k === 'botTakeover'), { k: 'botTakeover', p: { who: human(bName), why: 'left' }, t: `${bName}님의 자리를 대타 봇이 이어받았어요` });
+  assert.strictEqual((await post('hello', { room:a.room, token:b.token })).status, 200);
+  failed(await post('draw', { room:a.room, token:b.token }), 'notMember');
+  const resumed = await post('join', { room:a.room.toLowerCase(), token:b.token });
+  assert.strictEqual(resumed.status, 200); assert.strictEqual(resumed.resumed, true);
+  assert.ok(bSeat.bot, '참가 확인만으로 봇을 멈추지 않음');
+  await listen(b);
+  await until(() => bSeat.connected && !bSeat.bot);
+  assert.strictEqual(b.state.me.id, bSeat.id);
+  assert.deepStrictEqual(b.state.me.rack, bRack);
+  await post('leave', { room:a.room, token:b.token });
+  ok('나간 뒤 방 코드·저장된 참가 정보로 원래 자리와 손패 복귀', () => {});
   await post('leave', { room: a.room, token: a.token });
+  assert.ok(rooms.has(a.room) && rooms.get(a.room).emptySince);
+  clearTimeout(rooms.get(a.room).botTimer); rooms.delete(a.room);
   takeoverBot.think = oldThink;
   ok('나가기 처리: 손패를 보존하고 대타 봇으로 전환', () => {});
 
@@ -826,6 +841,7 @@ async function integration() {
     graceBot.think = savedThink;
     await post('leave', { room: g1.room, token: go.token });
     await post('leave', { room: g1.room, token: gc.token });
+    clearTimeout(gr.botTimer); rooms.delete(g1.room);
     go.close();
     gc.close();
     ok('연결 끊김 45초 뒤 대타 봇 전환·재접속 복귀', () => {});

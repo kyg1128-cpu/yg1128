@@ -40,6 +40,7 @@ const CHAT = { keep: 60, maxLen: 100, burst: 5, burstMs: 10000, gapMs: 400 };   
 const TIMER_CHOICES = [0, 60, 90, 120, 180];
 const DISCONNECT_GRACE_MS = 45000;   // 일시 끊김은 재접속을 기다린 뒤 대타 봇으로 전환
 const ROOM_IDLE_MS = 3 * 3600 * 1000;
+const RETURN_ROOM_MS = 30 * 60 * 1000;   // 모두 나간 판도 30분 동안 원래 자리로 복귀 가능
 const BOT = { think: 900, show: 1100, chat: 700 };   // 봇이 생각하는 시간 / 놓는 모습 보여 주는 시간 / 말하기 전 뜸(ms)
 // 봇 이름: key는 화면이 각 언어로 그릴 때 씀(players[].botKey), name은 한국어 대비용
 const BOT_NAMES = [{ key: 'rumi', name: '로봇 루미' }, { key: 'cube', name: '로봇 큐브' }, { key: 'tile', name: '로봇 타일' }, { key: 'joker', name: '로봇 조커' }, { key: 'robot', name: '로봇' }, { key: 'peace', name: '로봇 평화' }];
@@ -128,6 +129,7 @@ function planBot(args) {
   });
 }
 const humans = room => room.players.filter(p => !p.bot);
+const reservedSeat = p => p.takeover === 'offline' || p.takeover === 'left';
 // 기록 한 줄 = { k, p, t } (맨 위 LOG KEYS 참고)
 function log(room, k, p, t) {
   room.log.push({ k, p, t });
@@ -362,8 +364,18 @@ function cancelSeatBot(room, p) {
   clearTimeout(room.botTimer);
   room.preview = null;
 }
+function keepReservedRoom(room) {
+  if (humans(room).length) { delete room.emptySince; return; }
+  if (room.players.some(reservedSeat)) {
+    if (!room.emptySince) room.emptySince = Date.now();
+    return;
+  }
+  clearTimeout(room.botTimer);
+  rooms.delete(room.code);
+}
 function takeOverSeat(room, p, why) {
-  if (p.bot && p.takeover !== 'offline') return;
+  if (p.bot && !reservedSeat(p)) return;
+  if (p.bot && p.takeover === why) return;
   cancelSeatBot(room, p);
   p.bot = true;
   p.takeover = why;
@@ -371,18 +383,13 @@ function takeOverSeat(room, p, why) {
   p.connected = true;
   p.disconnectedAt = 0;
   if (why === 'left') {
-    // Explicit departure revokes every tab. Offline owners retain their secret to return.
-    p.token = crypto.randomBytes(16).toString('hex');
-    for (const res of p.clients) res.end();
+    // Keep the owner's secret; every open tab leaves without automatically reclaiming the seat.
+    for (const res of p.clients) { res.write('event: away\ndata: {"reason":"left"}\n\n'); res.end(); }
     p.clients.clear();
   }
   log(room, 'botTakeover', { who: whoOf(p), why }, `${p.name}님의 자리를 대타 봇이 이어받았어요`);
   handoffHost(room);
-  if (!room.players.some(q => !q.bot || q.takeover === 'offline')) {
-    clearTimeout(room.botTimer);
-    rooms.delete(room.code);
-    return;
-  }
+  keepReservedRoom(room);
   if (current(room) === p) {
     const seq = room.turnSeq;
     room.turnStartedAt = Date.now();
@@ -391,12 +398,13 @@ function takeOverSeat(room, p, why) {
   }
 }
 function restoreSeat(room, p) {
-  if (p.takeover !== 'offline') return;
+  if (!reservedSeat(p)) return;
   cancelSeatBot(room, p);
   p.bot = false;
   delete p.takeover;
   delete p.level;
   p.disconnectedAt = 0;
+  delete room.emptySince;
   handoffHost(room);
   if (room.state === 'playing' && current(room) === p) {
     room.turnStartedAt = Date.now();
@@ -407,7 +415,7 @@ function restoreSeat(room, p) {
 function removePlayer(room, p) {
   const idx = room.players.indexOf(p);
   if (idx < 0) return;
-  if (room.state === 'playing' && (!p.bot || p.takeover === 'offline')) {
+  if (room.state === 'playing' && (!p.bot || reservedSeat(p))) {
     takeOverSeat(room, p, 'left');
     return;
   }
@@ -424,7 +432,7 @@ function removePlayer(room, p) {
     }
   }
   handoffHost(room);
-  if (!room.players.some(q => !q.bot || q.takeover === 'offline')) { clearTimeout(room.botTimer); rooms.delete(room.code); }
+  keepReservedRoom(room);
 }
 
 // ---------- 상태 전송 (각자 자기 손패만 보임) ----------
@@ -507,10 +515,10 @@ class Fail extends Error {
 // ko: 예전 문장이 표와 조금 다른 곳에서만 넘김
 const fail = (code, params = {}, ko) => { throw new Fail(ko || ERR[code](params), code, params); };
 
-function auth(body, allowOfflineOwner = false) {
+function auth(body, allowReservedOwner = false) {
   const room = rooms.get(String(body.room || '').toUpperCase());
   if (!room) fail('roomNotFound');
-  const p = room.players.find(x => (!x.bot || (allowOfflineOwner && x.takeover === 'offline')) && x.token === body.token);
+  const p = room.players.find(x => (!x.bot || (allowReservedOwner && reservedSeat(x))) && x.token === body.token);
   if (!p) fail('notMember', room.kickedTokens?.has(body.token) ? { reason: 'kicked' } : {});
   return { room, p };
 }
@@ -533,6 +541,11 @@ const api = {
   join(b) {
     const room = rooms.get(String(b.room || '').toUpperCase().trim());
     if (!room) fail('badCode');
+    // Resume before checking game state/capacity. A room code or matching name is not ownership.
+    if (b.token != null) {
+      const { p } = auth({ room: room.code, token: b.token }, true);
+      return { room: room.code, token: p.token, resumed: true };
+    }
     if (room.state === 'playing') fail('alreadyPlaying');
     if (room.players.length >= MAX_PLAYERS) fail('roomFull');
     const p = newPlayer(room, b.name);
@@ -667,13 +680,13 @@ const api = {
     const { room, p } = auth(b, true);
     removePlayer(room, p);
     if (rooms.has(room.code)) broadcast(room);
-    return {};
+    return { canReturn: room.players.includes(p) && reservedSeat(p) };
   },
 };
 
 function events(req, res, q) {
   const room = rooms.get(String(q.get('room') || '').toUpperCase());
-  const p = room && room.players.find(x => (!x.bot || x.takeover === 'offline') && x.token === q.get('token'));
+  const p = room && room.players.find(x => (!x.bot || reservedSeat(x)) && x.token === q.get('token'));
   if (!p) { res.writeHead(404); return res.end(); }
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
@@ -765,6 +778,8 @@ setInterval(() => {
 setInterval(() => {
   const now = Date.now();
   for (const room of rooms.values()) {
+    // Bot turns and broadcasts must not extend an empty room's return window.
+    if (room.emptySince && now - room.emptySince >= RETURN_ROOM_MS) { clearTimeout(room.botTimer); rooms.delete(room.code); continue; }
     for (const p of room.players) for (const res of p.clients) res.write(': ping\n\n');
     if (now - room.lastActivity > ROOM_IDLE_MS && !room.players.some(p => !p.bot && p.connected)) { clearTimeout(room.botTimer); rooms.delete(room.code); }
   }

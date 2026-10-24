@@ -1,6 +1,6 @@
 {
   "name": "fellowship-rummikub",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "private": true,
   "description": "Self-hosted multiplayer tile game",
   "scripts": {
