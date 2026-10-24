@@ -1,5 +1,8 @@
 /* Small table-side details, kept clear of the rack and its controls. */
 .name-edit { flex:none;min-height:34px;padding:4px 9px;font-size:12px;color:#47694f;box-shadow:none;border:1px solid #c9d2bc;background:#edf0e3; }
+/* Disconnected names stay muted while host controls remain readable. */
+.plist li.off { opacity:1; }
+.plist li.off>.player-name { color:#6c7368; }
 .kick-player { flex:none;min-width:44px;min-height:36px;padding:4px 9px;font-size:12px;border:1px solid #d8bfb3;background:#f4e9df;color:#994d3c;box-shadow:none; }
 .plist li.confirming-kick { flex-wrap:wrap;border-color:#c3a27f;background:#f6eee3; }
 .kick-confirm { flex:0 0 100%;display:flex;flex-wrap:wrap;gap:6px;padding-top:7px;border-top:1px solid #d8c9b6; }
