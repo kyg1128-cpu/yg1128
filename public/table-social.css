@@ -1,5 +1,10 @@
 /* Small table-side details, kept clear of the rack and its controls. */
 .name-edit { flex:none;min-height:34px;padding:4px 9px;font-size:12px;color:#47694f;box-shadow:none;border:1px solid #c9d2bc;background:#edf0e3; }
+.kick-player { flex:none;min-width:44px;min-height:36px;padding:4px 9px;font-size:12px;border:1px solid #d8bfb3;background:#f4e9df;color:#994d3c;box-shadow:none; }
+.plist li.confirming-kick { flex-wrap:wrap;border-color:#c3a27f;background:#f6eee3; }
+.kick-confirm { flex:0 0 100%;display:flex;flex-wrap:wrap;gap:6px;padding-top:7px;border-top:1px solid #d8c9b6; }
+.kick-confirm>span { flex:0 0 100%;font-size:12px;line-height:1.5;overflow-wrap:anywhere;color:#775441; }
+.kick-confirm button { flex:1;min-height:40px;min-width:45px;padding:5px 8px;font-size:12px; }
 .nickname-form { margin:0 0 10px;padding:12px;background:#edf0e5;border:1px solid #cbd4bf;border-radius:12px;text-align:left; }
 .nickname-form label { font-size:12px;font-weight:700; }
 .nickname-fields { display:flex;gap:6px;margin-top:6px; }

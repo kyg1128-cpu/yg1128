@@ -41,6 +41,7 @@ function displayName(x, short) {
 function errText(j, status) {
   j = j || {};
   const p = j.params && typeof j.params === 'object' ? j.params : {};
+  if (j.code === 'notMember' && p.reason === 'kicked') return tx('err.kicked');
   if (j.code === 'rule') {
     if (p.rule === 'setInvalid') {
       if (I18N.has('analyze.' + p.sub)) return tx('rule.setInvalid', { index: p.index, sub: tx('analyze.' + p.sub) });
@@ -125,16 +126,23 @@ function connect() {
   es.addEventListener('chatlog', e => { chat = JSON.parse(e.data); try { loadSeen(); } catch {} renderChat(); mountChat(); });   // 저장소가 막힌 사생활 보호 모드에서도 대화 기록은 보이게
   es.addEventListener('chat', e => onChat(JSON.parse(e.data)));
   const mine = es;
+  es.addEventListener('removed', e => {
+    if (es !== mine || !session) return;
+    let reason;try { reason = JSON.parse(e.data).reason; } catch {}
+    if (reason !== 'kicked') return;
+    leaveLocal();toast(tx('err.kicked'), 6500);
+  });
   es.onerror = async () => {
     // 방이 사라졌으면 처음 화면으로 (내가 나가는 중이거나 다른 방으로 옮긴 뒤면 조용히)
     if (es !== mine || !session) return;
     if (window.UX) UX.connection(navigator.onLine ? 'reconnecting' : 'offline');
     try { await api('hello'); } catch (err) {
-      if (es === mine && goneErr(err)) { toast(err.message); leaveLocal(); }
+      if (es === mine && goneErr(err)) { leaveLocal();toast(err.message, err.params?.reason === 'kicked' ? 6500 : 2600); }
     }
   };
 }
 function leaveLocal() {
+  const leaving = session;
   if (window.TableSocial) TableSocial.clear();
   clearTimeout(bubbleTimer); $('#chatBubble').classList.add('hidden');
   $('#nicknameForm').classList.add('hidden');
@@ -144,7 +152,7 @@ function leaveLocal() {
   if (es) es.close();
   es = null; session = null; S = null; W = null; rackOrder = [];
   chat = []; chatOpen = false; renderChat();
-  saveSession();
+  if (leaving) dropSession(leaving); else saveSession();
   history.replaceState(null, '', location.pathname);
   $('#btnRejoin').classList.add('hidden');
   for (const id of ['#tv', '#rulesSheet', '#coach']) $(id).classList.add('hidden');
@@ -160,10 +168,10 @@ function show(id) {
   if (window.TableMusic) TableMusic.setScene(id);
 }
 let toastTimer;
-function toast(msg) {
+function toast(msg, duration = 2600) {
   const t = $('#toast');
   t.textContent = msg; t.classList.remove('hidden');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 2600);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), duration);
 }
 // 내 차례 알림: 종소리 솔→도 + 진동 (sfx.js)
 function beep() { sfx('turn'); }
@@ -589,13 +597,14 @@ document.addEventListener('keydown', e => {
 });
 
 let lobbyRequest = false;
+let kickConfirmId = null;
 let practiceInviteOpen = false, practiceInviteRoom = '';
 // 상대 설정과 시작을 함께 잠가, 추가 도중 게임이 먼저 시작되지 않게 합니다.
 async function editLobby(action, payload = {}) {
   if (lobbyRequest || !S || S.state !== 'lobby') return;
   lobbyRequest = true;
   renderLobby();
-  try { await api(action, payload); }
+  try { return await api(action, payload); }
   catch (err) { toast(err.message); }
   finally {
     lobbyRequest = false;
@@ -604,6 +613,7 @@ async function editLobby(action, payload = {}) {
 }
 function renderLobby() {
   show('lobby');
+  if (S.hostId !== S.me.id || !S.players.some(p => p.id === kickConfirmId && !p.bot && p.id !== S.me.id)) kickConfirmId = null;
   const practice = S.mode === 'practice';
   if (practiceInviteRoom !== S.code) { practiceInviteOpen = false; practiceInviteRoom = S.code; }
   $('#lobby').classList.toggle('practice-lobby', practice);
@@ -631,6 +641,25 @@ function renderLobby() {
       li.append(edit);
     }
     li.append(el('span', 'grow'));
+    if (!p.bot && p.id !== S.me.id && S.hostId === S.me.id) {
+      const kick = el('button', 'kick-player', tx('lobby.kick'));
+      kick.type = 'button';kick.disabled = lobbyRequest;kick.dataset.kick = p.id;
+      kick.setAttribute('aria-label', tx('lobby.kickAria', { name: p.name }));
+      kick.setAttribute('aria-expanded', String(kickConfirmId === p.id));
+      kick.onclick = () => { kickConfirmId = p.id;renderLobby();document.querySelector(`[data-kick-confirm="${p.id}"]`)?.focus({preventScroll:true}); };
+      li.append(kick);
+      if (kickConfirmId === p.id) {
+        li.classList.add('confirming-kick');
+        const actions = el('div', 'kick-confirm');
+        actions.append(el('span', '', tx('lobby.kickConfirm', { name: p.name })));
+        const yes = el('button', 'danger', tx('lobby.kickYes')), no = el('button', 'ghost', tx('lobby.nameCancel'));
+        yes.type = no.type = 'button';yes.dataset.kickConfirm = p.id;yes.disabled = no.disabled = lobbyRequest;
+        yes.setAttribute('aria-label', tx('lobby.kickYesAria', { name: p.name }));
+        yes.onclick = async () => { kickConfirmId = null;const result = await editLobby('kick', { playerId: p.id });if(result && S?.state === 'lobby')toast(tx('lobby.kickDone', { name: p.name })); };
+        no.onclick = () => { kickConfirmId = null;renderLobby();document.querySelector(`[data-kick="${p.id}"]`)?.focus({preventScroll:true}); };
+        actions.append(yes, no);li.append(actions);
+      }
+    }
     if (p.bot) {
       const lv = el('button', 'lv ' + p.level, levelName(p.level));
       lv.setAttribute('aria-label', tx('lobby.levelAria', { name: displayName(p), level: levelName(p.level) }));
@@ -1391,7 +1420,11 @@ if (window.I18N) I18N.on(() => {
 // 그 밖에 이 기기에 하던 게임이 살아 있으면 처음 화면에 '돌아가기' 버튼
 let rejoinRoom = '';   // '돌아가기' 버튼의 방 (말을 바꾸면 글자만 다시)
 async function offerRejoin(saved) {
-  try { await api('hello', saved); } catch (err) { if (goneErr(err)) dropSession(saved); return; }
+  try { await api('hello', saved); } catch (err) {
+    if (goneErr(err)) dropSession(saved);
+    if (err.params?.reason === 'kicked') toast(err.message, 6500);
+    return;
+  }
   if (session) return;
   const b = $('#btnRejoin');
   rejoinRoom = saved.room;
@@ -1407,10 +1440,14 @@ async function offerRejoin(saved) {
     if (!saved || (q ? saved.room !== q : saved !== tab)) continue;
     session = saved;
     try { await api('hello'); saveSession(); connect(); return; }
-    catch (err) { session = null; if (goneErr(err)) dropSession(saved); }
+    catch (err) {
+      session = null;
+      if (goneErr(err)) dropSession(saved);
+      if (err.params?.reason === 'kicked') toast(err.message, 6500);
+    }
   }
   show('home');
-  if (dev && dev.room !== q) offerRejoin(dev);
+  if (dev && dev.room !== q && loadSession('localStorage')?.token === dev.token) offerRejoin(dev);
   // 이름 칸에 바로 초점: 마우스가 있는 컴퓨터에서만 (폰은 키보드가 튀어나오고 가로 화면에선 제목이 위로 밀려 가려짐)
   if (!nameInput.value && !matchMedia('(pointer: coarse)').matches) nameInput.focus({ preventScroll: true });
 })();

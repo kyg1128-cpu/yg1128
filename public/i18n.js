@@ -17,6 +17,12 @@
   const cap = w => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w);   // English: 문장 첫 글자
 
   const KO = {
+    'lobby.kick': '강퇴', 'lobby.kickAria': '{name}님 강퇴', 'lobby.kickConfirm': '{name}님을 내보낼까요?',
+    'lobby.kickYes': '내보내기', 'lobby.kickYesAria': '{name}님 내보내기', 'lobby.kickDone': '{name}님을 대기실에서 내보냈어요',
+    'err.kicked': '방장이 대기실에서 내보냈어요.',
+    'err.kickHostOnly': '방장만 참가자를 내보낼 수 있어요', 'err.kickLobbyOnly': '참가자 강퇴는 게임 시작 전 대기실에서만 가능해요',
+    'err.playerNotFound': '해당 참가자가 이미 나갔어요', 'err.cannotKickSelf': '본인은 강퇴할 수 없어요. 방 나가기를 이용해 주세요',
+    'err.kickHumansOnly': '컴퓨터 상대는 봇 빼기로 제거해 주세요', 'log.kick': '방장이 {who}님을 내보냈어요',
     'lobby.nickname': '내 닉네임', 'lobby.nameEdit': '수정', 'lobby.nameSave': '저장', 'lobby.nameCancel': '취소',
     'lobby.nameSaved': '닉네임을 바꿨어요: {name}',
     'err.badName': '닉네임을 입력해 주세요 (최대 12자)', 'err.renameLobbyOnly': '닉네임은 시작 전 대기실에서 바꿀 수 있어요',
@@ -358,6 +364,12 @@
   };
 
   const EN = {
+    'lobby.kick': 'Remove', 'lobby.kickAria': 'Remove {name}', 'lobby.kickConfirm': 'Remove {name} from the lobby?',
+    'lobby.kickYes': 'Remove', 'lobby.kickYesAria': 'Confirm removal of {name}', 'lobby.kickDone': '{name} was removed from the lobby',
+    'err.kicked': 'The host removed you from the lobby.',
+    'err.kickHostOnly': 'Only the host can remove players', 'err.kickLobbyOnly': 'Players can only be removed in the lobby before the game starts',
+    'err.playerNotFound': 'That player has already left', 'err.cannotKickSelf': 'Use Leave room to leave your own seat',
+    'err.kickHumansOnly': 'Use the bot removal button for computer opponents', 'log.kick': 'The host removed {who} from the lobby',
     'lobby.nickname': 'Your nickname', 'lobby.nameEdit': 'Edit', 'lobby.nameSave': 'Save', 'lobby.nameCancel': 'Cancel',
     'lobby.nameSaved': 'Nickname changed to {name}',
     'err.badName': 'Enter a nickname (up to 12 characters)', 'err.renameLobbyOnly': 'Change your nickname in the lobby before the game starts',
