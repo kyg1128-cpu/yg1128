@@ -9,7 +9,7 @@
   --gold:var(--blue); --gold-hi:var(--blue-ink); --gold-deep:var(--blue-ink);
   --cream:var(--ink); --accent:var(--blue); --bad:#c23e4e;
   --tile:#fffffc; --tile-edge:#cbd7ce;
-  --c0:#d13e45; --c1:#315fdc; --c2:#aa6106; --c3:#23343b; --joker:#7557ae;
+  --c0:#d13e45; --c1:#315fdc; --c2:#e2b900; --c3:#23343b; --joker:#7557ae;
   --sans:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   --serif:var(--sans);
 }
@@ -37,7 +37,7 @@ input:focus-visible,select:focus-visible,.card input:focus-visible,.card select:
 #home .logo .tile { --tw:29px; --th:38px; --tf:20px; border-radius:7px; box-shadow:0 2px 0 #d4ded5; cursor:default; }
 #home .logo .tile.c0 { background:#ffedef; border-color:#f6dcdf; }
 #home .logo .tile.c1 { background:#edf1ff; border-color:#dfe6fa; }
-#home .logo .tile.c2 { background:#fff3df; border-color:#f2e4c9; }
+#home .logo .tile.c2 { background:#fff9d8; border-color:#ede1a0; }
 #home .logo .tile.joker { background:#f0ebf8; border-color:#e5ddf1; }
 #home .muted { font-size:14px; }
 #home label { margin-top:3px; font-size:12px; font-weight:650; }

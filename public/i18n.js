@@ -12,7 +12,7 @@
   const KEY = 'rummi-lang';
   const s = n => (Number(n) === 1 ? '' : 's');   // English plural
   const BATCHIM = new Set([1, 3, 6, 7, 8, 10, 11, 13]);   // 일 삼 육 칠 팔 십 십일 십삼 → '이', 나머지 → '가'
-  const COLORS = { ko: ['빨강', '파랑', '주황', '검정'], en: ['red', 'blue', 'orange', 'black'] };
+  const COLORS = { ko: ['빨강', '파랑', '노랑', '검정'], en: ['red', 'blue', 'yellow', 'black'] };
   const pick = (map, k, d) => (Object.prototype.hasOwnProperty.call(map, k) ? map[k] : d);
   const cap = w => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w);   // English: 문장 첫 글자
 
@@ -62,7 +62,9 @@
     'credits.name': '곰국',
     'credits.contact': '문의',
     'credits.aria': '제작자 및 문의',
-    'menu.takeoverHint': '게임 중 나가면 대타 봇이 내 타일로 이어서 플레이해요.',
+    'menu.takeoverHint': '게임 중 나가면 봇이 대신해요. 같은 기기에서 방 코드를 입력하면 원래 자리로 돌아올 수 있어요.',
+    'toast.botContinuing': '봇이 대신 플레이해요. 방 코드로 다시 돌아올 수 있어요.',
+    'toast.resumed': '원래 자리로 돌아왔어요.',
 
     // 처음 화면
     'home.title': '루미큐브 온라인',
@@ -202,7 +204,7 @@
     'toast.resultCopied': '결과를 복사했어요',
     'share.title': '루미큐브 같이 해요 🙌',
     'share.text': p => `방 코드 ${p.code}`,
-    'confirm.leave': '나가면 대타 봇이 내 타일과 점수를 이어받아요. 이 자리로 다시 들어올 수는 없어요. 나갈까요?',
+    'confirm.leave': '나가면 봇이 대신 플레이해요. 같은 기기에서 방 코드를 입력해 다시 이어 할 수 있어요. 나갈까요?',
     'confirm.draw': '놓은 타일을 되돌리고 뽑을까요?',
 
     // 서버 오류 (서버가 보낸 code → 내 말로)
@@ -409,7 +411,9 @@
     'credits.name': 'Gomguk',
     'credits.contact': 'Contact',
     'credits.aria': 'Creator and contact',
-    'menu.takeoverHint': 'If you leave during a game, a stand-in bot will play your tiles.',
+    'menu.takeoverHint': 'A bot plays for you while you’re away. Enter the room code on this device to return to your seat.',
+    'toast.botContinuing': 'A bot is playing for you. Use the room code to return.',
+    'toast.resumed': 'You’re back in your original seat.',
 
     'home.title': 'Rummikub Online',
     'home.sub': "Play with friends or sharpen your skills solo. For 2–6 players.",
@@ -543,7 +547,7 @@
     'toast.resultCopied': 'Results copied',
     'share.title': 'Let’s play Rummikub 🙌',
     'share.text': p => `Room code ${p.code}`,
-    'confirm.leave': 'A stand-in bot will take over your tiles and score. You won’t be able to return to this seat. Leave?',
+    'confirm.leave': 'A bot will play for you while you’re away. Enter the room code on this device to resume. Leave?',
     'confirm.draw': 'Take back the tiles you placed and draw?',
 
     'err.network': 'Connection problem — please try again',

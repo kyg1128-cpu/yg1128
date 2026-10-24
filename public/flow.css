@@ -8,7 +8,7 @@
 .results .mini .tile.joker .jkg { width: 12px; height: 12px; transform: none; }
 svg.jkg.inline { display: inline-block; width: 1.25em; height: 1.25em; vertical-align: -.28em; }
 
-/* ---------- 색 구분 기호 (body.marks): 왼쪽 위에 CSS로 그린 작은 모양 — 빨강 ● 파랑 ▲ 주황 ■ 검정 ◆ ---------- */
+/* ---------- 색 구분 기호 (body.marks): 왼쪽 위에 CSS로 그린 작은 모양 — 빨강 ● 파랑 ▲ 노랑 ■ 검정 ◆ ---------- */
 body.marks .tile.c0::before, body.marks .tile.c1::before, body.marks .tile.c2::before, body.marks .tile.c3::before {
   content: ''; position: absolute; top: 3px; left: 3px; width: 7px; height: 7px; background: currentColor; pointer-events: none;
 }

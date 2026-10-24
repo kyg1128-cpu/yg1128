@@ -102,6 +102,7 @@ async function api(path, body = {}) {
 // 세션은 같은 탭(sessionStorage)과 이 기기(localStorage) 둘 다에 — 탭을 닫았다가 초대 링크로 다시 와도 내 자리로.
 // 사생활 보호 모드처럼 저장소가 막혀 있으면 조용히 넘어감
 function saveSession() {
+  if (session) rememberRoom(session);
   const v = session ? JSON.stringify(session) : null;
   for (const k of ['sessionStorage', 'localStorage']) {
     try { if (v) window[k].setItem('rummi-session', v); else window[k].removeItem('rummi-session'); } catch {}
@@ -113,19 +114,47 @@ function loadSession(k) {
     return s && typeof s.room === 'string' && typeof s.token === 'string' ? { room: s.room, token: s.token } : null;
   } catch { return null; }
 }
-function dropSession(s) {   // 이 방이 사라졌을 때 그 방 기록만 지움 (다른 방 기록은 남김)
+function clearActiveSession(s) {
   for (const k of ['sessionStorage', 'localStorage']) {
     try { const cur = loadSession(k); if (cur && cur.token === s.token) window[k].removeItem('rummi-session'); } catch {}
   }
+}
+// Remember up to ten original seats, separately from the room currently open in this tab.
+// Storage can be unavailable in private browsing; the current tab still remembers its seat.
+const rememberedRooms = new Map();
+function roomBook() {
+  try {
+    const rows = JSON.parse(localStorage.getItem('rummi-rooms') || '[]');
+    return Array.isArray(rows) ? rows.filter(s => s && /^[A-Z]{4}$/.test(s.room) && typeof s.token === 'string' && s.token.length > 0 && s.token.length <= 128).slice(0, 10) : [];
+  } catch { return []; }
+}
+function rememberRoom(s) {
+  rememberedRooms.set(s.room, { room:s.room, token:s.token });
+  if (rememberedRooms.size > 10) rememberedRooms.delete(rememberedRooms.keys().next().value);
+  try { localStorage.setItem('rummi-rooms', JSON.stringify([{ room:s.room, token:s.token }, ...roomBook().filter(x => x.room !== s.room)].slice(0, 10))); } catch {}
+}
+function savedRoom(code) {
+  return [loadSession('sessionStorage'), loadSession('localStorage'), ...roomBook(), rememberedRooms.get(code)].find(s => s && s.room === code) || null;
+}
+function dropSession(s) {   // 강퇴·삭제된 자리만 잊음. 다른 방의 참가 정보는 보존.
+  clearActiveSession(s);
+  if (rememberedRooms.get(s.room)?.token === s.token) rememberedRooms.delete(s.room);
+  try { localStorage.setItem('rummi-rooms', JSON.stringify(roomBook().filter(x => x.token !== s.token))); } catch {}
 }
 function connect() {
   if (window.UX) UX.connection('connecting');
   if (es) es.close();
   es = new EventSource(`/api/events?room=${encodeURIComponent(session.room)}&token=${encodeURIComponent(session.token)}`);
-  es.onmessage = e => { if (window.UX) UX.connection('ready'); onState(JSON.parse(e.data)); };
-  es.addEventListener('chatlog', e => { chat = JSON.parse(e.data); try { loadSeen(); } catch {} renderChat(); mountChat(); });   // 저장소가 막힌 사생활 보호 모드에서도 대화 기록은 보이게
-  es.addEventListener('chat', e => onChat(JSON.parse(e.data)));
   const mine = es;
+  es.onmessage = e => { if (es !== mine || !session) return; if (window.UX) UX.connection('ready'); onState(JSON.parse(e.data)); };
+  es.addEventListener('chatlog', e => { if (es !== mine || !session) return; chat = JSON.parse(e.data); try { loadSeen(); } catch {} renderChat(); mountChat(); });   // 저장소가 막힌 사생활 보호 모드에서도 대화 기록은 보이게
+  es.addEventListener('chat', e => { if (es === mine && session) onChat(JSON.parse(e.data)); });
+  es.addEventListener('away', e => {
+    if (es !== mine || !session) return;
+    let reason;try { reason = JSON.parse(e.data).reason; } catch {}
+    if (reason !== 'left') return;
+    leaveLocal({ keepSeat:true });toast(tx('toast.botContinuing'), 6500);
+  });
   es.addEventListener('removed', e => {
     if (es !== mine || !session) return;
     let reason;try { reason = JSON.parse(e.data).reason; } catch {}
@@ -141,7 +170,7 @@ function connect() {
     }
   };
 }
-function leaveLocal() {
+function leaveLocal({ keepSeat = false } = {}) {
   const leaving = session;
   if (window.TableSocial) TableSocial.clear();
   clearTimeout(bubbleTimer); $('#chatBubble').classList.add('hidden');
@@ -152,12 +181,16 @@ function leaveLocal() {
   if (es) es.close();
   es = null; session = null; S = null; W = null; rackOrder = [];
   chat = []; chatOpen = false; renderChat();
-  if (leaving) dropSession(leaving); else saveSession();
+  if (leaving) {
+    if (keepSeat) { rememberRoom(leaving);clearActiveSession(leaving); }
+    else dropSession(leaving);
+  } else saveSession();
   history.replaceState(null, '', location.pathname);
   $('#btnRejoin').classList.add('hidden');
-  for (const id of ['#tv', '#rulesSheet', '#coach']) $(id).classList.add('hidden');
+  for (const id of ['#tv', '#rulesSheet', '#coach', '#menu', '#overlay']) $(id).classList.add('hidden');
   show('home');
   mountChat();
+  if (keepSeat && leaving) { $('#code').value = leaving.room;offerRejoin(leaving); }
 }
 
 // ---------- 화면 ----------
@@ -1172,20 +1205,28 @@ const nameInput = $('#name');
 try { nameInput.value = localStorage.getItem('rummi-name') || ''; } catch {}
 const getName = () => { const n = nameInput.value.trim(); try { localStorage.setItem('rummi-name', n); } catch {} return n; };
 
-async function enter(promise) {
+async function enter(promise, previous = null) {
   try {
     const r = await promise;
     session = { room: r.room, token: r.token };
     saveSession();
     history.replaceState(null, '', '?r=' + r.room);
     connect();
-  } catch (err) { toast(err.message); }
+    if (r.resumed) toast(tx('toast.resumed'));
+    return true;
+  } catch (err) {
+    if (previous && (goneErr(err) || err.code === 'badCode')) dropSession(previous);
+    toast(err.message);
+    return false;
+  }
 }
 $('#btnCreate').onclick = () => { if (!getName()) return nameInput.focus(), toast(tx('toast.needName')); enter(api('create', { name: getName() })); };
 $('#btnJoin').onclick = () => {
-  if (!getName()) return nameInput.focus(), toast(tx('toast.needName'));
   const code = $('#code').value.trim().toUpperCase();
   if (code.length !== 4) return toast(tx('toast.needCode'));
+  const saved = savedRoom(code);
+  if (saved) return enter(api('join', { room:code, token:saved.token }), saved);
+  if (!getName()) return nameInput.focus(), toast(tx('toast.needName'));
   enter(api('join', { room: code, name: getName() }));
 };
 $('#code').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btnJoin').click(); });
@@ -1220,9 +1261,14 @@ $('#btnAgain').onclick = doStart;
 const doLeave = async () => {
   if (S && S.state === 'playing' && !confirm(tx('confirm.leave'))) return;
   if (es) { es.close(); es = null; }   // 스트림이 끊기며 '방을 찾을 수 없어요'가 뜨지 않게 먼저 닫음
-  try { await api('leave'); } catch {}
+  let keepSeat = S?.state === 'playing';
+  try { const r = await api('leave');keepSeat = !!r.canReturn; } catch (err) {
+    // A lost response is ambiguous: keep the secret unless the server says the seat is gone.
+    if (goneErr(err)) keepSeat = false;
+  }
   $('#menu').classList.add('hidden'); $('#overlay').classList.add('hidden');
-  leaveLocal();
+  leaveLocal({ keepSeat });
+  if (keepSeat) toast(tx('toast.botContinuing'), 6500);
 };
 $('#btnLeave').onclick = doLeave; $('#btnLeave2').onclick = doLeave; $('#btnLeave3').onclick = doLeave;
 // ⋯ 메뉴: 열면 초점을 메뉴 안으로, 닫으면 ⋯ 단추로 (키보드로 쓸 때 뒤의 게임 버튼을 헤매지 않게)
@@ -1425,19 +1471,19 @@ async function offerRejoin(saved) {
     if (err.params?.reason === 'kicked') toast(err.message, 6500);
     return;
   }
-  if (session) return;
+  if (session || savedRoom(saved.room)?.token !== saved.token) return;
   const b = $('#btnRejoin');
   rejoinRoom = saved.room;
   b.textContent = tx('home.rejoin', { room: saved.room });
   b.classList.remove('hidden');
-  b.onclick = () => { b.classList.add('hidden'); enter(Promise.resolve(saved)); };
+  b.onclick = () => { b.classList.add('hidden'); enter(api('join', saved), saved); };
 }
 (async function boot() {
   const q = (new URLSearchParams(location.search).get('r') || '').trim().toUpperCase();
   if (q) $('#code').value = q;
-  const tab = loadSession('sessionStorage'), dev = loadSession('localStorage');
-  for (const saved of [tab, dev]) {
-    if (!saved || (q ? saved.room !== q : saved !== tab)) continue;
+  const tab = loadSession('sessionStorage');
+  const saved = q ? savedRoom(q) : tab;
+  if (saved) {
     session = saved;
     try { await api('hello'); saveSession(); connect(); return; }
     catch (err) {
@@ -1447,7 +1493,8 @@ async function offerRejoin(saved) {
     }
   }
   show('home');
-  if (dev && dev.room !== q && loadSession('localStorage')?.token === dev.token) offerRejoin(dev);
+  const dev = loadSession('localStorage') || roomBook()[0] || [...rememberedRooms.values()].pop();
+  if (dev && dev.room !== q) offerRejoin(dev);
   // 이름 칸에 바로 초점: 마우스가 있는 컴퓨터에서만 (폰은 키보드가 튀어나오고 가로 화면에선 제목이 위로 밀려 가려짐)
   if (!nameInput.value && !matchMedia('(pointer: coarse)').matches) nameInput.focus({ preventScroll: true });
 })();

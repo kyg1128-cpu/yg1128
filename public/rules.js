@@ -9,7 +9,7 @@
   const deckSize = players => players >= 5 ? TILE_COUNT : STANDARD_TILE_COUNT;
   const JOKER_PENALTY = 30;
   const INITIAL_MELD = 30;
-  const COLOR_NAMES = ['빨강', '파랑', '주황', '검정'];
+  const COLOR_NAMES = ['빨강', '파랑', '노랑', '검정'];
 
   function tile(id) {
     if (id === 104 || id === 105 || id >= 158) return { id, joker: true, color: -1, num: 0 };

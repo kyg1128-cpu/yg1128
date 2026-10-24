@@ -6,7 +6,7 @@
   --parch: #fbf5e7; --parch-2: #f3e9d2; --line: #e3d4b0;
   --cream: #f6efdc;                                   /* 어두운 바탕 위 글자 */
   --tile: #fffaf0; --tile-edge: #d8caa6; --ink: #2a2333;
-  --c0: #d62828; --c1: #1d5bd8; --c2: #c96500; --c3: #1b1b1b;   /* 주황은 상아색 위에서 읽히도록 조금 진하게 */
+  --c0: #d62828; --c1: #1d5bd8; --c2: #e2b900; --c3: #1b1b1b;
   --joker: #6b2d8f;                                   /* 조커 ✦ (예배 보라색) */
   --accent: #f2c94c; --bad: #ff5a5a; --muted: #6f6452;
   --serif: "Gowun Batang", "Nanum Myeongjo", "Noto Serif KR", "AppleMyungjo", "Batang", "바탕", serif;
@@ -137,6 +137,7 @@ h2, h3 { margin: 4px 0; }
   transition: transform .08s;
 }
 .tile.c0 { color: var(--c0); } .tile.c1 { color: var(--c1); } .tile.c2 { color: var(--c2); } .tile.c3 { color: var(--c3); }
+.tile.c2 { -webkit-text-stroke:.5px #826700; paint-order:stroke fill; } /* 노란 잉크를 유지하며 밝은 도자기 위 숫자의 윤곽을 살림 */
 /* 조커: 베들레헴의 별 ✦ — 은은한 금빛 후광 */
 .tile.joker {
   color: var(--joker); font-family: "Segoe UI Symbol", "Apple Symbols", "Noto Sans Symbols 2", "Noto Sans Symbols2", Arial, sans-serif;
