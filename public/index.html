@@ -8,6 +8,9 @@
 <meta name="theme-color" content="#284e40">
 <title>루미큐브 온라인</title>
 <link rel="icon" href="brand.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="app-icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preload" href="reveal-display.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="flow.css">
@@ -62,9 +65,10 @@
     <button id="btnPractice" class="big practice home-action"><span class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="14" rx="4"/><path d="M12 3v4M8 12h.01M16 12h.01M9 17h6"/></svg></span><span class="action-copy"><span data-i18n="home.practice">혼자 연습하기</span><small data-i18n="home.practiceSub">컴퓨터 1~5명 · 난이도 선택</small></span><span class="action-arrow" aria-hidden="true">→</span></button>
     <div class="or" data-i18n="home.or">또는</div>
     <div class="row">
-      <input id="code" maxlength="4" placeholder="방 코드" data-i18n-ph="home.codePh" data-i18n-aria="home.codePh" autocapitalize="characters" autocomplete="off">
+      <input id="code" maxlength="20" placeholder="방 코드 또는 복귀 코드" data-i18n-ph="home.codePh" data-i18n-aria="home.codePh" autocapitalize="characters" autocomplete="off">
       <button id="btnJoin" class="big" data-i18n="home.join">참가</button>
     </div>
+    <p class="code-help" data-i18n="recovery.inputHint">이 기기: 방 코드 4글자 · 다른 기기: 내 복귀 코드 12글자</p>
     <details class="rules" id="homeRules">
       <summary data-i18n="rules.title">📖 규칙 한눈에</summary>
     </details>
@@ -124,6 +128,7 @@
       </label>
       <button id="btnStart" class="primary big" data-i18n="lobby.start">게임 시작</button>
       <p id="lobbyHint" class="muted"></p>
+      <button id="btnClaimHostLobby" type="button" class="ghost hidden" data-i18n="host.claim">방장 맡기</button>
     </div>
     <button id="btnPracticeInvite" class="ghost hidden" type="button" aria-expanded="false" aria-controls="lobbyInvitePanel"></button>
     <div id="lobbyChatSlot" class="chat-slot"></div>
@@ -194,6 +199,7 @@
 <div id="menu" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="prefsH">
   <div class="card center glass menu-card">
     <h3><span data-i18n="menu.code">방 코드</span> <span id="menuCode"></span></h3>
+    <div class="seat-access"><p id="menuHost"></p><button id="btnClaimHost" type="button" class="hidden" data-i18n="host.claim">방장 맡기</button><label for="recoveryCode" data-i18n="recovery.title">내 복귀 코드</label><div class="recovery-row"><input id="recoveryCode" type="password" readonly autocomplete="off" spellcheck="false" aria-label="내 복귀 코드" data-i18n-aria="recovery.title"><button id="btnRevealRecovery" type="button" data-i18n="recovery.show">보기</button><button id="btnCopyRecovery" type="button" data-i18n="recovery.copy">복사</button></div><small data-i18n="recovery.hint">다른 기기에서는 이 코드로 원래 자리에 돌아와요. 다른 사람에게 공유하지 마세요.</small></div>
     <button id="btnRules2" type="button" data-i18n="rules.title">📖 규칙 한눈에</button>
     <button id="btnShare2" data-i18n="lobby.share">초대 링크 복사</button>
     <button id="btnSound">소리 켜짐</button>
@@ -203,6 +209,8 @@
       <h4 id="turnSettingsH" data-i18n="turn.settings">내 차례 알림</h4>
       <div class="turn-setting-row"><button id="btnTurnSound" type="button" role="switch" aria-checked="true"><span data-i18n="turn.sound">내 차례 알림음</span><span id="turnSoundState"></span></button><button id="btnTurnPreview" type="button" data-i18n="turn.preview">미리 듣기</button></div>
       <button id="btnTurnDesktop" type="button" role="switch" aria-checked="false"></button>
+      <button id="btnPushTest" type="button" class="hidden" data-i18n="push.test">잠금 화면 알림 테스트</button>
+      <button id="btnInstall" type="button" class="hidden" data-i18n="push.install">앱 설치하기</button>
       <p id="turnPermissionHint"></p><p id="turnAudioHint"></p>
     </section>
     <section class="prefs" aria-labelledby="prefsH">
@@ -270,10 +278,12 @@
 <script src="music.js"></script>
 <script src="table-feel.js"></script>
 <script src="tile-motion.js"></script>
+<script src="seat-store.js"></script>
 <script src="app.js"></script>
 <script src="table-social.js"></script>
 <script src="flow.js"></script>
 <script src="ux.js"></script>
+<script src="push-client.js"></script>
 <script src="turn-alerts.js"></script>
 </body>
 </html>

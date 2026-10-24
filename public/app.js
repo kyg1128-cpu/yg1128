@@ -42,6 +42,7 @@ function errText(j, status) {
   j = j || {};
   const p = j.params && typeof j.params === 'object' ? j.params : {};
   if (j.code === 'notMember' && p.reason === 'kicked') return tx('err.kicked');
+  if (j.code === 'notMember' && p.reason === 'moved') return tx('err.moved');
   if (j.code === 'rule') {
     if (p.rule === 'setInvalid') {
       if (I18N.has('analyze.' + p.sub)) return tx('rule.setInvalid', { index: p.index, sub: tx('analyze.' + p.sub) });
@@ -129,6 +130,7 @@ function roomBook() {
   } catch { return []; }
 }
 function rememberRoom(s) {
+  if(window.SeatStore)void SeatStore.put(s);
   rememberedRooms.set(s.room, { room:s.room, token:s.token });
   if (rememberedRooms.size > 10) rememberedRooms.delete(rememberedRooms.keys().next().value);
   try { localStorage.setItem('rummi-rooms', JSON.stringify([{ room:s.room, token:s.token }, ...roomBook().filter(x => x.room !== s.room)].slice(0, 10))); } catch {}
@@ -137,6 +139,7 @@ function savedRoom(code) {
   return [loadSession('sessionStorage'), loadSession('localStorage'), ...roomBook(), rememberedRooms.get(code)].find(s => s && s.room === code) || null;
 }
 function dropSession(s) {   // 강퇴·삭제된 자리만 잊음. 다른 방의 참가 정보는 보존.
+  if(window.SeatStore)void SeatStore.remove(s);
   clearActiveSession(s);
   if (rememberedRooms.get(s.room)?.token === s.token) rememberedRooms.delete(s.room);
   try { localStorage.setItem('rummi-rooms', JSON.stringify(roomBook().filter(x => x.token !== s.token))); } catch {}
@@ -161,6 +164,7 @@ function connect() {
     if (reason !== 'kicked') return;
     leaveLocal();toast(tx('err.kicked'), 6500);
   });
+  es.addEventListener('moved',()=>{if(es===mine && session){leaveLocal();toast(tx('err.moved'),6500);}});
   es.onerror = async () => {
     // 방이 사라졌으면 처음 화면으로 (내가 나가는 중이거나 다른 방으로 옮긴 뒤면 조용히)
     if (es !== mine || !session) return;
@@ -449,6 +453,8 @@ function onState(s) {
   if (firstState) renderChat();   // 내 메시지 표시(오른쪽 정렬)는 내 id를 안 다음에야 가능
   render();
   if (window.TurnAlerts) TurnAlerts.sync(S);
+  if (window.PushBridge) PushBridge.onState(S);
+  accessLabels();
   if (window.TableSocial) TableSocial.sync(S, firstState || newRound);
   if(change && change.me && change.drew && newDraw.size && S.state==='playing' && window.TableFeel)TableFeel.draw([...newDraw]);
   if (RV && !RV.started) runReveal();
@@ -711,6 +717,7 @@ function renderLobby() {
     ul.append(li);
   }
   const host = S.hostId === S.me.id;
+  $('#btnClaimHostLobby').classList.toggle('hidden',host || !S.hostAvailable);
   const slots = Math.max(0, capacity - S.players.length);
   $('#botSummary').textContent = tx('lobby.botCount', { n: S.players.filter(p => p.bot).length });
   $('#botSetupHint').textContent = tx(!host ? 'lobby.botHostOnly' : slots ? 'lobby.botHelp' : 'lobby.botFull', { n: slots });
@@ -1220,10 +1227,12 @@ async function enter(promise, previous = null) {
   }
 }
 $('#btnCreate').onclick = () => { if (!getName()) return nameInput.focus(), toast(tx('toast.needName')); enter(api('create', { name: getName() })); };
-$('#btnJoin').onclick = () => {
-  const code = $('#code').value.trim().toUpperCase();
-  if (code.length !== 4) return toast(tx('toast.needCode'));
-  const saved = savedRoom(code);
+$('#btnJoin').onclick = async () => {
+  const code = $('#code').value.toUpperCase().replace(/[\s-]/g,'');
+  if(/^[A-Z2-9]{12}$/.test(code))return enter(api('recover',{code}));
+  if (!/^[A-Z]{4}$/.test(code)) return toast(tx('toast.needCode'));
+  const saved = savedRoom(code) || (window.SeatStore ? await SeatStore.find(code) : null);
+  if(saved)rememberRoom(saved);
   if (saved) return enter(api('join', { room:code, token:saved.token }), saved);
   if (!getName()) return nameInput.focus(), toast(tx('toast.needName'));
   enter(api('join', { room: code, name: getName() }));
@@ -1272,6 +1281,8 @@ const doLeave = async () => {
 $('#btnLeave').onclick = doLeave; $('#btnLeave2').onclick = doLeave; $('#btnLeave3').onclick = doLeave;
 // ⋯ 메뉴: 열면 초점을 메뉴 안으로, 닫으면 ⋯ 단추로 (키보드로 쓸 때 뒤의 게임 버튼을 헤매지 않게)
 function openMenu() {
+  $('#recoveryCode').type='password';$('#btnRevealRecovery').textContent=tx('recovery.show');
+  accessLabels();
   $('#menu').classList.remove('hidden');
   const c = $('#menu .card'); if (c) c.scrollTop = 0;
   try { $('#btnRules2').focus({ preventScroll: true }); } catch {}
@@ -1283,6 +1294,20 @@ function closeMenu(focusBack = true) {
 }
 $('#btnMenu').onclick = openMenu;
 $('#btnMenuClose').onclick = () => closeMenu();
+function accessLabels() {
+  if(!S)return;
+  const host=S.players.find(p=>p.id===S.hostId);
+  $('#menuHost').textContent=tx('host.current',{name:host?displayName(host):'…'});
+  $('#btnClaimHost').classList.toggle('hidden',S.hostId===S.me.id || !S.hostAvailable);
+  $('#recoveryCode').value=(S.me.recoveryCode||'').replace(/(.{4})(?=.)/g,'$1-');
+}
+for(const id of['#btnClaimHost','#btnClaimHostLobby'])$(id).onclick=()=>api('claimHost').catch(err=>toast(err.message));
+$('#btnCopyRecovery').onclick=async()=>{
+  const value=S?.me.recoveryCode;if(!value)return;
+  if(await copyText(value.replace(/(.{4})(?=.)/g,'$1-')))toast(tx('recovery.copied'));
+  else{$('#recoveryCode').focus();$('#recoveryCode').select();toast(tx('recovery.select'));}
+};
+$('#btnRevealRecovery').onclick=()=>{const input=$('#recoveryCode');input.type=input.type==='password'?'text':'password';$('#btnRevealRecovery').textContent=tx(input.type==='password'?'recovery.show':'recovery.hide');};
 // 메뉴가 열려 있으면 Tab은 메뉴 안에서만 돎 (마지막 다음엔 처음으로, Shift+Tab은 거꾸로)
 $('#menu').addEventListener('keydown', e => {
   if (e.key !== 'Tab') return;
@@ -1481,7 +1506,7 @@ async function offerRejoin(saved) {
   const q = (new URLSearchParams(location.search).get('r') || '').trim().toUpperCase();
   if (q) $('#code').value = q;
   const tab = loadSession('sessionStorage');
-  const saved = q ? savedRoom(q) : tab;
+  const saved = q ? savedRoom(q) || (window.SeatStore?await SeatStore.find(q):null) : tab;
   if (saved) {
     session = saved;
     try { await api('hello'); saveSession(); connect(); return; }
@@ -1492,7 +1517,8 @@ async function offerRejoin(saved) {
     }
   }
   show('home');
-  const dev = loadSession('localStorage') || roomBook()[0] || [...rememberedRooms.values()].pop();
+  const dev = loadSession('localStorage') || roomBook()[0] || [...rememberedRooms.values()].pop() || (window.SeatStore?(await SeatStore.list())[0]:null);
+  if(dev)rememberRoom(dev);
   if (dev && dev.room !== q) offerRejoin(dev);
   // 이름 칸에 바로 초점: 마우스가 있는 컴퓨터에서만 (폰은 키보드가 튀어나오고 가로 화면에선 제목이 위로 밀려 가려짐)
   if (!nameInput.value && !matchMedia('(pointer: coarse)').matches) nameInput.focus({ preventScroll: true });
