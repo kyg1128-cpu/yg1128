@@ -12,6 +12,7 @@
   const HAPTIC = {
     pick: 8, place: 12, back: 8, valid: 15, draw: 10, invalid: 18, joker: 15,
     turn: [30, 60, 30], big: [20, 40, 20], firstMeld: [20, 40, 20], win: [40, 60, 40, 60, 80],
+    turnAlert: [55, 70, 55, 70, 90],
   };
   const MODES = ['on', 'buzz', 'off'];
   const LABEL = { on: '🔔 소리·진동', buzz: '📳 진동만', off: '🔕 끔' };
@@ -176,6 +177,7 @@
     invalid(o, t) { thump(o, LOW.D3, t, 0.18, 0.42); return 0.2; },
     draw(o, t) { hiss(o,t,.09,850,.8,.3,1650);hiss(o,t+.05,.015,2600,1.4,.32);thump(o,LOW.A3,t+.045,.05,.16);return .14; },
     turn(o, t) { bell(o, P(1), t, 0.65, 0.13); bell(o, P(3), t + 0.1, .75, 0.11); return .9; },
+    turnAlert(o, t) { bell(o, P(0), t, .55, .24); bell(o, P(2), t + .18, .6, .22); bell(o, P(5), t + .4, .85, .21); return 1.3; },
     next(o, t) { bell(o, P(2), t, 0.6, 0.1); return 0.65; },
     commit(o, t, s) { clack(o,t,s,.9);tone(o,P(s),t+.06,.28,.095,.004);tone(o,P(s+2),t+.10,.35,.045,.004);return .48; },
     joker(o, t) {   // 종소리 + 살짝 어긋난 한 옥타브 위 두 음이 반짝이며 맥놀이

@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="table-feel.css">
 <link rel="stylesheet" href="atelier.css">
 <link rel="stylesheet" href="table-social.css">
+<link rel="stylesheet" href="turn-alerts.css">
 </head>
 <body>
 <!-- 조커 문양 (그림 문자 대신 SVG: 기기마다 똑같이 보이게). 기본은 십자가 -->
@@ -198,6 +199,12 @@
     <button id="btnSound">소리 켜짐</button>
     <label class="volume-control" for="effectVolume"><span><span data-i18n="pref.volume">효과음 크기</span><output id="effectVolumeValue" for="effectVolume">50%</output></span><input id="effectVolume" type="range" min="0" max="100" step="5" value="50"></label>
     <div class="music-settings"><button type="button" id="btnMusic" role="switch" aria-checked="true"><span data-i18n="music.title">테이블 BGM</span><span id="musicState"></span></button><label class="volume-control" for="musicVolume"><span><span data-i18n="music.volume">BGM 크기</span><output id="musicVolumeValue" for="musicVolume">18%</output></span><input id="musicVolume" type="range" min="0" max="60" step="2" value="18"></label><small data-i18n="music.hint">잔잔한 피아노와 마림바 · 이 기기에만 저장돼요</small></div>
+    <section class="turn-settings" aria-labelledby="turnSettingsH">
+      <h4 id="turnSettingsH" data-i18n="turn.settings">내 차례 알림</h4>
+      <div class="turn-setting-row"><button id="btnTurnSound" type="button" role="switch" aria-checked="true"><span data-i18n="turn.sound">내 차례 알림음</span><span id="turnSoundState"></span></button><button id="btnTurnPreview" type="button" data-i18n="turn.preview">미리 듣기</button></div>
+      <button id="btnTurnDesktop" type="button" role="switch" aria-checked="false"></button>
+      <p id="turnPermissionHint"></p><p id="turnAudioHint"></p>
+    </section>
     <section class="prefs" aria-labelledby="prefsH">
       <h4 id="prefsH" data-i18n="menu.prefs">내 화면 설정</h4>
       <div class="lang-switch" data-i18n-aria="lang.label" aria-label="언어"></div>
@@ -251,6 +258,10 @@
 </div>
 
 <div id="toast" class="toast hidden"></div>
+<aside id="turnAlert" class="turn-alert hidden" role="status" aria-live="assertive" aria-atomic="true">
+  <svg class="turn-bell" viewBox="0 0 32 32" aria-hidden="true"><path d="M8 13a8 8 0 0 1 16 0v6l3 4H5l3-4zM12 27a4 4 0 0 0 8 0M16 2v3"/></svg>
+  <div><small data-i18n="turn.kicker">이제 내가 둘 시간</small><strong id="turnAlertTitle" data-i18n="turn.title">내 차례예요!</strong><p data-i18n="turn.body">타일을 놓거나 한 장 뽑아 주세요.</p></div>
+</aside>
 
 <script src="rules.js"></script>
 <script src="qr.js"></script>
@@ -263,5 +274,6 @@
 <script src="table-social.js"></script>
 <script src="flow.js"></script>
 <script src="ux.js"></script>
+<script src="turn-alerts.js"></script>
 </body>
 </html>

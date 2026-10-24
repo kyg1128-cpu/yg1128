@@ -172,6 +172,7 @@ function connect() {
 }
 function leaveLocal({ keepSeat = false } = {}) {
   const leaving = session;
+  if (window.TurnAlerts) TurnAlerts.clear();
   if (window.TableSocial) TableSocial.clear();
   clearTimeout(bubbleTimer); $('#chatBubble').classList.add('hidden');
   $('#nicknameForm').classList.add('hidden');
@@ -206,8 +207,6 @@ function toast(msg, duration = 2600) {
   t.textContent = msg; t.classList.remove('hidden');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), duration);
 }
-// 내 차례 알림: 종소리 솔→도 + 진동 (sfx.js)
-function beep() { sfx('turn'); }
 // ---------- 손맛 도우미 (소리·진동·연출) ----------
 const sfx = (name, opts) => { try { if (window.Sfx) Sfx.play(name, opts); } catch {} };
 const isCalm = () => document.body.classList.contains('calm') || matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -413,7 +412,7 @@ function onState(s) {
     const {now:oldNow,preview:oldPreview,...oldView}=prevS;
     const {now:newNow,preview:newPreview,...newView}=s;
     if(JSON.stringify(oldView)===JSON.stringify(newView)) {
-      S=s;tick();if(window.UX)UX.sync();return;
+      S=s;tick();if(window.UX)UX.sync();if(window.TurnAlerts)TurnAlerts.sync(S);return;
     }
   }
   const firstState = !S;
@@ -436,8 +435,7 @@ function onState(s) {
   if (S.turnSeq !== lastTurnSeq) {
     lastTurnSeq = S.turnSeq;
     W = null;   // 턴이 바뀌면 한 수 취소 기록도 새로
-    if (isMyTurn()) afterReveal(() => { beep(); glowDock(); });
-    else if (!firstState && amNext()) afterReveal(() => sfx('next'));
+    if (!isMyTurn() && !firstState && amNext()) afterReveal(() => sfx('next'));
   }
   if (isMyTurn() && !W) W = newWork();
   if (!isMyTurn()) W = null;
@@ -450,6 +448,7 @@ function onState(s) {
   graceAt = cur && !cur.connected && Number.isFinite(cur.graceLeft) ? { id: cur.id, until: Date.now() + cur.graceLeft * 1000 } : null;
   if (firstState) renderChat();   // 내 메시지 표시(오른쪽 정렬)는 내 id를 안 다음에야 가능
   render();
+  if (window.TurnAlerts) TurnAlerts.sync(S);
   if (window.TableSocial) TableSocial.sync(S, firstState || newRound);
   if(change && change.me && change.drew && newDraw.size && S.state==='playing' && window.TableFeel)TableFeel.draw([...newDraw]);
   if (RV && !RV.started) runReveal();
@@ -582,7 +581,7 @@ function chime() {
   if (window.Sfx) return Sfx.play('chat');   // 소리 모드(소리·진동/진동만/끔)를 따름
   if (!sound) return;
   try {
-    const ctx = beep.ctx || (beep.ctx = new AudioContext());
+    const ctx = chime.ctx || (chime.ctx = new AudioContext());
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = 'sine'; o.frequency.value = 1046; g.gain.value = 0.035;
     o.connect(g); g.connect(ctx.destination);

@@ -17,6 +17,18 @@
   const cap = w => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w);   // English: 문장 첫 글자
 
   const KO = {
+    'turn.settings': '내 차례 알림', 'turn.sound': '내 차례 알림음', 'turn.on': '켜짐', 'turn.off': '꺼짐', 'turn.preview': '미리 듣기',
+    'turn.title': '내 차례예요!', 'turn.kicker': '이제 내가 둘 시간', 'turn.body': '타일을 놓거나 한 장 뽑아 주세요.',
+    'turn.notification': '방 {code}에서 내 차례를 기다리고 있어요.',
+    'turn.desktopOn': '브라우저 알림 켜짐', 'turn.desktopOff': '브라우저 알림 켜기', 'turn.asking': '알림 권한 확인 중…',
+    'turn.blocked': '브라우저 알림이 차단되어 있어요', 'turn.blockedHint': '주소창의 사이트 설정에서 알림을 허용해 주세요. 화면·소리 알림은 그대로 사용할 수 있어요.',
+    'turn.desktopHint': '다른 탭을 보고 있을 때도 알려 드려요. 켜기를 누르면 브라우저에서 권한을 물어봐요.',
+    'turn.desktopReady': '다른 탭을 보고 있어도 내 차례를 알려 드릴게요.',
+    'turn.unsupported': '이 브라우저에서는 화면·소리 알림을 사용해 주세요.',
+    'turn.audioHint': '알림음 크기는 위의 효과음 크기를 따라가요. 화면을 닫거나 폰을 잠그면 알림이 제한될 수 있어요.',
+    'turn.mutedHint': '알림음을 들으려면 전체 소리를 켜고 효과음 크기를 올려 주세요.',
+    'turn.noAudio': '이 브라우저에서는 소리를 재생할 수 없어요. 화면으로 내 차례를 알려 드릴게요.',
+    'turn.touchHint': '화면을 한 번 누른 뒤 다시 들어 보세요.',
     'lobby.kick': '강퇴', 'lobby.kickAria': '{name}님 강퇴', 'lobby.kickConfirm': '{name}님을 내보낼까요?',
     'lobby.kickYes': '내보내기', 'lobby.kickYesAria': '{name}님 내보내기', 'lobby.kickDone': '{name}님을 대기실에서 내보냈어요',
     'err.kicked': '방장이 대기실에서 내보냈어요.',
@@ -366,6 +378,18 @@
   };
 
   const EN = {
+    'turn.settings': 'Turn alerts', 'turn.sound': 'Turn alert sound', 'turn.on': 'On', 'turn.off': 'Off', 'turn.preview': 'Preview',
+    'turn.title': 'Your turn!', 'turn.kicker': 'YOUR MOVE', 'turn.body': 'Play some tiles or draw one.',
+    'turn.notification': 'It’s your turn in room {code}.',
+    'turn.desktopOn': 'Browser alerts on', 'turn.desktopOff': 'Enable browser alerts', 'turn.asking': 'Checking permission…',
+    'turn.blocked': 'Browser alerts are blocked', 'turn.blockedHint': 'Allow notifications in the site settings beside the address bar. In-game and sound alerts still work.',
+    'turn.desktopHint': 'Get an alert while viewing another tab. Your browser asks for permission when you enable this.',
+    'turn.desktopReady': 'You’ll get a turn alert while viewing another tab.',
+    'turn.unsupported': 'Use in-game and sound alerts in this browser.',
+    'turn.audioHint': 'Alert volume follows the sound effect slider above. Alerts may pause if you close the page or lock your phone.',
+    'turn.mutedHint': 'Turn on sound and raise the sound effect volume to hear alerts.',
+    'turn.noAudio': 'Audio isn’t available in this browser. You’ll still get a visible turn alert.',
+    'turn.touchHint': 'Tap the screen once, then try the preview again.',
     'lobby.kick': 'Remove', 'lobby.kickAria': 'Remove {name}', 'lobby.kickConfirm': 'Remove {name} from the lobby?',
     'lobby.kickYes': 'Remove', 'lobby.kickYesAria': 'Confirm removal of {name}', 'lobby.kickDone': '{name} was removed from the lobby',
     'err.kicked': 'The host removed you from the lobby.',

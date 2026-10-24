@@ -1,0 +1,23 @@
+.turn-alert { position:fixed;z-index:50;left:50%;top:110px;transform:translateX(-50%);display:flex;align-items:center;gap:15px;width:min(430px,calc(100vw - 24px));padding:16px 22px;border:1px solid #b99b57;border-radius:14px;background:linear-gradient(125deg,#fffaf0,#f0e5c7);color:#244c3c;box-shadow:0 10px 30px #0c251a45,inset 0 1px 0 #fff;pointer-events:none;animation:turn-arrive .24s ease-out; }
+.turn-bell { flex:none;width:43px;height:43px;fill:#e9d6a3;stroke:#8f702d;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round; }
+.turn-alert>div { min-width:0; }
+.turn-alert small { display:block;color:#7c683b;font-size:10px;letter-spacing:.08em;margin-bottom:3px; }
+.turn-alert strong { display:block;font-size:28px;font-weight:800;line-height:1.2;letter-spacing:-.03em; }
+.turn-alert p { margin:5px 0 0;font-size:12px;line-height:1.5;color:#5d6850;overflow-wrap:anywhere; }
+body.turn-notice #coach { visibility:hidden; }
+@keyframes turn-arrive { from {opacity:0;transform:translate(-50%,-9px) scale(.98);} to {opacity:1;transform:translate(-50%,0) scale(1);} }
+.turn-settings { margin:10px 0;padding:11px 12px;border:1px solid #d7d1ba;border-radius:12px;background:#f3efe2;text-align:left; }
+.turn-settings h4 { margin:0 0 6px;font-size:13px;color:#4c6047; }
+.turn-setting-row { display:flex;align-items:center;gap:7px; }
+#btnTurnSound { display:flex;justify-content:space-between;align-items:center;gap:8px;flex:1;min-width:0;padding:6px 0;min-height:40px;background:transparent;box-shadow:none;font-size:13px; }
+#turnSoundState { flex:none;padding:3px 7px;border:1px solid #c8d0b5;border-radius:10px;background:#e2e9d6;font-size:10px;color:#47613c; }
+#btnTurnSound[aria-checked=false] #turnSoundState { background:#e7e4db;color:#787669;border-color:#d4d0c3; }
+#btnTurnPreview { flex:none;min-height:36px;padding:5px 8px;font-size:11px; }
+#btnTurnDesktop { width:100%;min-height:38px;margin-top:3px;padding:6px 8px;font-size:12px;text-align:left; }
+#btnTurnDesktop[aria-checked=true] { background:#dfe8d4;color:#355d39; }
+.turn-settings p { margin:5px 0 0;font-size:10px;line-height:1.55;color:#717760;overflow-wrap:anywhere; }
+@media (max-width:380px) { .turn-alert {gap:11px;padding:13px 15px;}.turn-alert strong {font-size:25px;}.turn-bell {width:35px;height:35px;} }
+@media (max-height:430px) and (orientation:landscape) { .turn-alert {width:min(370px,calc(100vw - 24px));padding:8px 14px;gap:10px;}.turn-alert small {display:none;}.turn-alert strong {font-size:22px;}.turn-alert p {font-size:10px;margin-top:2px;}.turn-bell {width:31px;height:31px;} }
+body.calm .turn-alert {animation:none;}
+@media (prefers-reduced-motion:reduce) {.turn-alert {animation:none;}}
+@media (forced-colors:active) {.turn-alert,.turn-settings {background:Canvas;color:CanvasText;border-color:ButtonText;}.turn-alert p,.turn-alert small {color:CanvasText;}.turn-bell {fill:Canvas;stroke:ButtonText;}}
