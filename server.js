@@ -32,6 +32,7 @@ const crypto = require('crypto');
 const { Worker } = require('worker_threads');
 const R = require('./public/rules.js');
 const Bot = require('./bot.js');
+const pushService = require('./push').createPushService();
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUB = path.join(__dirname, 'public');
@@ -39,6 +40,7 @@ const MAX_PLAYERS = R.MAX_PLAYERS;
 const CHAT = { keep: 60, maxLen: 100, burst: 5, burstMs: 10000, gapMs: 400 };   // 채팅: 보관 개수, 글자 수, 10초에 5개, 최소 간격
 const TIMER_CHOICES = [0, 60, 90, 120, 180];
 const DISCONNECT_GRACE_MS = 45000;   // 일시 끊김은 재접속을 기다린 뒤 대타 봇으로 전환
+const HOST_GRACE_MS = 3000;
 const ROOM_IDLE_MS = 3 * 3600 * 1000;
 const RETURN_ROOM_MS = 30 * 60 * 1000;   // 모두 나간 판도 30분 동안 원래 자리로 복귀 가능
 const BOT = { think: 900, show: 1100, chat: 700 };   // 봇이 생각하는 시간 / 놓는 모습 보여 주는 시간 / 말하기 전 뜸(ms)
@@ -59,12 +61,20 @@ function cleanName(name) {
   const s = String(name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 12);
   return s || '플레이어';
 }
+function recoveryCode() {
+  const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code;
+  do { code=Array.from({length:12},()=>alphabet[crypto.randomInt(alphabet.length)]).join(''); }
+  while([...rooms.values()].some(room=>room.players.some(p=>p.recoveryCode===code)));
+  return code;
+}
 function newPlayer(room, name) {
   let n = cleanName(name), base = n, i = 2;
   while (room.players.some(p => p.name === n)) n = `${base}${i++}`;
   return {
     id: crypto.randomBytes(4).toString('hex'),
     token: crypto.randomBytes(16).toString('hex'),
+    recoveryCode: recoveryCode(),
     name: n, rack: [], melded: false, score: 0,
     clients: new Set(), connected: false, disconnectedAt: Date.now(),
   };
@@ -166,6 +176,7 @@ function beginTurn(room) {
   room.deadline = room.settings.timer ? Date.now() + room.settings.timer * 1000 : 0;
   clearTimeout(room.botTimer);
   if (current(room).bot) { const seq = room.turnSeq; room.botTimer = setTimeout(() => botAct(room, seq), 0); }
+  pushService.notifyTurn(room,()=>rooms.get(room.code)===room);
 }
 // 봇 차례: 바로 계산 시작 → (생각하는 척) 최소 시간 채우기 → 놓는 모습 미리 보여 주기 → 확정
 async function botAct(room, seq) {
@@ -354,9 +365,13 @@ function makeAwards(room, winner) {
   return out;
 }
 function handoffHost(room) {
-  if (humans(room).some(p => p.id === room.hostId)) return;
-  const next = humans(room).find(p => p.connected) || humans(room)[0];
-  if (next) room.hostId = next.id;
+  const old=room.players.find(p=>p.id===room.hostId);
+  if(old && !old.bot && (old.connected || Date.now()-old.disconnectedAt<HOST_GRACE_MS))return false;
+  const next=humans(room).find(p=>p.connected);
+  if(!next || next.id===room.hostId)return false;
+  room.hostId=next.id;
+  log(room,'hostChange',{who:whoOf(next)},`${next.name}님이 방장을 맡았어요`);
+  return true;
 }
 function cancelSeatBot(room, p) {
   if (room.state !== 'playing' || current(room) !== p) return;
@@ -449,7 +464,8 @@ function view(room, me) {
   return {
     now,
     code: room.code, state: room.state, mode: room.mode || 'friends', maxPlayers: MAX_PLAYERS, deckSize: room.state === 'lobby' ? R.deckSize(room.players.length) : room.deckSize || R.STANDARD_TILE_COUNT, hostId: room.hostId, settings: room.settings,
-    me: { id: me.id, rack: me.rack, melded: me.melded },
+    me: { id: me.id, rack: me.rack, melded: me.melded, recoveryCode:me.recoveryCode },
+    hostAvailable: !room.players.some(p=>p.id===room.hostId && !p.bot && p.connected),
     players: room.players.map(p => ({
       id: p.id, name: p.name, bot: !!p.bot, botKey: botKeyOf(p), takeover: p.takeover || null, level: p.bot ? p.level : undefined, count: p.rack.length, melded: p.melded, score: p.score, connected: p.connected,
       offFor: offFor(room, p, now), graceLeft: graceLeft(room, p, now),
@@ -507,6 +523,12 @@ const ERR = {
   playerNotFound: () => '해당 참가자가 이미 나갔어요',
   cannotKickSelf: () => '본인은 강퇴할 수 없어요. 방 나가기를 이용해 주세요',
   kickHumansOnly: () => '컴퓨터 상대는 봇 빼기로 제거해 주세요',
+  badRecovery: () => '복귀 코드를 확인해 주세요. 방이 종료되었을 수도 있어요',
+  hostStillHere: () => '현재 방장이 접속 중이에요',
+  needConnection: () => '방에 접속한 뒤 다시 시도해 주세요',
+  pushUnavailable: () => '서버 푸시 알림이 아직 준비되지 않았어요',
+  badSubscription: () => '알림 등록 정보를 확인해 주세요',
+  pushDeliveryFailed: () => '알림을 보내지 못했어요. 알림을 껐다 켠 뒤 다시 시도해 주세요',
   // 'rule': 규칙 위반 — 한국어 문장은 checkPlay의 reason, params = { rule: checkPlay code, ...checkPlay params }
 };
 class Fail extends Error {
@@ -519,7 +541,7 @@ function auth(body, allowReservedOwner = false) {
   const room = rooms.get(String(body.room || '').toUpperCase());
   if (!room) fail('roomNotFound');
   const p = room.players.find(x => (!x.bot || (allowReservedOwner && reservedSeat(x))) && x.token === body.token);
-  if (!p) fail('notMember', room.kickedTokens?.has(body.token) ? { reason: 'kicked' } : {});
+  if (!p) fail('notMember', room.kickedTokens?.has(body.token) ? { reason:'kicked' } : room.movedTokens?.has(body.token) ? { reason:'moved' } : {});
   return { room, p };
 }
 function myTurn(room, p) {
@@ -555,6 +577,41 @@ const api = {
     return { room: room.code, token: p.token };
   },
   hello(b) { auth(b, true); return {}; },
+  recover(b) {
+    const code=String(b.code || '').toUpperCase().replace(/[\s-]/g,'');
+    if(!/^[A-Z2-9]{12}$/.test(code))fail('badRecovery');
+    for(const room of rooms.values()) {
+      const p=room.players.find(p=>p.recoveryCode===code && (!p.bot || reservedSeat(p)));
+      if(!p)continue;
+      if(!room.movedTokens)room.movedTokens=new Set();room.movedTokens.add(p.token);
+      while(room.movedTokens.size>32)room.movedTokens.delete(room.movedTokens.values().next().value);
+      p.token=crypto.randomBytes(16).toString('hex');p.push?.clear();
+      for(const res of p.clients){res.write('event: moved\ndata: {"reason":"moved"}\n\n');res.end();}p.clients.clear();
+      p.connected=!!p.bot;p.disconnectedAt=Date.now();
+      return {room:room.code,token:p.token,resumed:true};
+    }
+    fail('badRecovery');
+  },
+  claimHost(b) {
+    const {room,p}=auth(b);
+    if(!p.connected)fail('needConnection');
+    if(room.hostId===p.id)return {};
+    if(room.players.some(q=>q.id===room.hostId && !q.bot && q.connected))fail('hostStillHere');
+    room.hostId=p.id;log(room,'hostChange',{who:whoOf(p)},`${p.name}님이 방장을 맡았어요`);broadcast(room);return {};
+  },
+  pushSubscribe(b) {
+    const {room,p}=auth(b,true);if(!pushService.available)fail('pushUnavailable');
+    if(!pushService.attach(p,b.subscription,b.lang,b.sound))fail('badSubscription');
+    pushService.notifyTurn(room,()=>rooms.get(room.code)===room);return {subscribed:true};
+  },
+  pushAck(b) {const {room,p}=auth(b,true);pushService.ack(room,p,b.endpoint,b.turn);return {};},
+  pushUnsubscribe(b) {const {p}=auth(b,true);pushService.detach(p,b.endpoint);return {};},
+  async pushTest(b) {
+    const {room,p}=auth(b,true);if(!pushService.available)fail('pushUnavailable');
+    if(!p.push?.has(b.endpoint))fail('badSubscription');
+    if(p.lastPushTest && Date.now()-p.lastPushTest<10000)fail('tooFast');p.lastPushTest=Date.now();
+    if(!await pushService.test(room,p,b.endpoint))fail('pushDeliveryFailed');return {sent:true};
+  },
   kick(b) {
     const { room, p } = auth(b);
     if (room.hostId !== p.id) fail('kickHostOnly');
@@ -742,11 +799,12 @@ const server = http.createServer(async (req, res) => {
     const addr = server.address();
     return sendJSON(res, 200, { lan: lanUrls(addr && addr.port ? addr.port : PORT) });
   }
+  if(url.pathname==='/api/push-info' && req.method==='GET')return sendJSON(res,200,{available:pushService.available,publicKey:pushService.publicKey});
   if (url.pathname.startsWith('/api/')) {
     const fn = api[url.pathname.slice(5)];
     if (!fn || req.method !== 'POST') return sendJSON(res, 404, { error: '없는 요청' });
     try {
-      sendJSON(res, 200, fn(await readBody(req)));
+      sendJSON(res, 200, await fn(await readBody(req)));
     } catch (e) {
       if (e instanceof Fail) sendJSON(res, 400, { error: e.message, code: e.code, params: e.params });
       else { console.error(e); sendJSON(res, 500, { error: '서버 오류' }); }
@@ -760,8 +818,8 @@ const server = http.createServer(async (req, res) => {
 setInterval(() => {
   const now = Date.now();
   for (const room of rooms.values()) {
-    if (room.state !== 'playing') continue;
-    let changed = false;
+    let changed = handoffHost(room);
+    if (room.state !== 'playing') {if(changed)broadcast(room);continue;}
     for (const seat of room.players) {
       if (!seat.bot && !seat.connected && now - seat.disconnectedAt >= DISCONNECT_GRACE_MS) {
         takeOverSeat(room, seat, 'offline');
@@ -794,4 +852,4 @@ if (require.main === module) {
     console.log('');
   });
 }
-module.exports = { server, rooms, BOT, planBot, BOT_LINES, BOT_NAMES, ERR, makeAwards, newStats };
+module.exports = { server, rooms, BOT, planBot, BOT_LINES, BOT_NAMES, ERR, makeAwards, newStats, pushService };
