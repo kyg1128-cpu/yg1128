@@ -38,7 +38,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const PUB = path.join(__dirname, 'public');
 const MAX_PLAYERS = R.MAX_PLAYERS;
 const CHAT = { keep: 60, maxLen: 100, burst: 5, burstMs: 10000, gapMs: 400 };   // 채팅: 보관 개수, 글자 수, 10초에 5개, 최소 간격
-const TIMER_CHOICES = [0, 60, 90, 120, 180];
+const TIMER_MIN = 5, TIMER_MAX = 1800;
 const DISCONNECT_GRACE_MS = 45000;   // 일시 끊김은 재접속을 기다린 뒤 대타 봇으로 전환
 const HOST_GRACE_MS = 3000;
 const ROOM_IDLE_MS = 3 * 3600 * 1000;
@@ -517,6 +517,7 @@ const ERR = {
   tooFast: () => '너무 빨라요. 잠시 후 다시 보내 주세요',
   botNotFound: () => '봇을 찾을 수 없어요',
   badLevel: () => '난이도를 확인해 주세요',
+  badTimer: () => '시간은 5~1800초 사이의 정수 또는 0(제한 없음)으로 입력해 주세요',
   needTwo: () => '2명 이상이어야 시작할 수 있어요',
   badName: () => '닉네임을 입력해 주세요 (최대 12자)',
   renameLobbyOnly: () => '닉네임은 시작 전 대기실에서 바꿀 수 있어요',
@@ -695,7 +696,8 @@ const api = {
     const { room, p } = auth(b);
     if (room.hostId !== p.id) fail('hostOnly', { what: 'change' });
     if (room.state === 'playing') fail('notDuringGame', { what: 'change' });
-    if (TIMER_CHOICES.includes(b.timer)) room.settings.timer = b.timer;
+    if (!Number.isInteger(b.timer) || (b.timer !== 0 && (b.timer < TIMER_MIN || b.timer > TIMER_MAX))) fail('badTimer');
+    room.settings.timer = b.timer;
     broadcast(room);
     return {};
   },

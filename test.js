@@ -272,6 +272,17 @@ ok('tableDiff: 새 묶음·사라진 옛 묶음·새로 놓인 타일', () => {
     assert.strictEqual(load({ localStorage: memStore({ 'rummi-sound': 'buzz' }), navigator: {} }).mode, 'off');
     assert.strictEqual(load({ localStorage: memStore({ 'rummi-sound': 'buzz' }), navigator: { vibrate() { return true; } } }).mode, 'buzz');
   });
+  ok('sfx: 진동만 따로 끄기·저장·복구, 전체 끔과 숨긴 화면의 진동 억제', () => {
+    const store=memStore(),calls=[],doc={hidden:false};
+    const env={localStorage:store,document:doc,navigator:{vibrate:p=>{calls.push(p);return true;}}};
+    const sound=load(env);sound.setHaptics(false);calls.length=0;
+    assert.strictEqual(sound.mode,'on','진동을 꺼도 소리 모드 유지');
+    assert.strictEqual(sound.buzz('place'),false);assert.deepStrictEqual(calls,[]);
+    assert.strictEqual(load(env).hapticsEnabled,false,'다시 열어도 선호 유지');
+    sound.setHaptics(true);assert.strictEqual(sound.buzz('place'),true);assert.deepStrictEqual(calls,[12]);
+    doc.hidden=true;assert.strictEqual(sound.buzz('place'),false);assert.deepStrictEqual(calls,[12]);
+    doc.hidden=false;sound.setMode('off');calls.length=0;assert.strictEqual(sound.buzz('valid'),false);assert.deepStrictEqual(calls,[]);
+  });
 }
 {
   // public/i18n.js 사전 ↔ 서버·규칙 코드 짝 맞추기: 하나라도 어긋나면 영어 화면에 한국어 대비 문장이 조용히 섞여 나옴
@@ -635,6 +646,18 @@ async function integration() {
   assert.strictEqual(a.state.mode, 'friends', '기본은 친구 대기실');
   assert.ok(!a.state.players[1].name.includes('<'), '이름 태그 제거');
   ok('방 만들기·참가·실시간 상태', () => {});
+  {
+    const old=rooms.get(a.room).settings.timer;
+    for(const timer of [null,'37',[],{},-1,4,1801,37.5]){
+      const result=await post('settings',{room:a.room,token:a.token,timer});
+      assert.strictEqual(result.code,'badTimer');assert.strictEqual(rooms.get(a.room).settings.timer,old);
+    }
+    for(const timer of [5,37,1800,0]){
+      const result=await post('settings',{room:a.room,token:a.token,timer});
+      assert.strictEqual(result.status,200);assert.strictEqual(rooms.get(a.room).settings.timer,timer);
+    }
+    ok('방장 직접 시간: 5~1800초 정수·무제한, 잘못된 입력은 변경 없이 거절',()=>{});
+  }
   {
     const bn = a.state.players[1].name;
     assert.deepStrictEqual(a.state.log, [{ k: 'join', p: { who: human(bn) }, t: `${bn}님 입장` }]);
