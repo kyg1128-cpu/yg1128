@@ -403,10 +403,10 @@ ok('어려움: 같은 숫자 그룹 3개로 나누기 (13 두 벌 + 조커로 �
   const p2 = Bot.plan(t2, [T(1, 10, 1)], true, 'hard');
   assert.ok(p2 && R.checkPlay(t2, [T(1, 10, 1)], p2, true).ok);
 });
-ok('쉬움: 단순 묶음 하나·무작위 실수 없이 단순 붙이기', () => {
+ok('쉬움: 단순 묶음은 모두·무작위 실수 없이 단순 붙이기', () => {
   const hand = [T(0, 1), T(0, 2), T(0, 3), T(1, 7), T(2, 7), T(3, 7)];
   const t = Bot.plan([], hand, true, 'easy', { rng: () => { throw Error('계산에 난수 사용 금지'); } });
-  assert.strictEqual(t.length, 1);
+  assert.strictEqual(t.length, 2);
   assert.ok(R.checkPlay([], hand, t, true).ok);
   const run = [[T(0, 1), T(0, 2), T(0, 3)]];
   const added=Bot.plan(run,[T(0,4)],true,'easy',{rng:()=>{throw Error('임의로 붙이기 건너뛰기 금지');}});
@@ -415,9 +415,11 @@ ok('쉬움: 단순 묶음 하나·무작위 실수 없이 단순 붙이기', () 
 ok('쉬움도 조커로 단순 첫 등록 가능·중간은 여러 묶음 탐색', () => {
   const initial=[T(0,10),T(0,11),J1];
   assert.ok(R.checkPlay([],initial,Bot.plan([],initial,false,'easy'),false).ok);
-  const hand=[T(0,1),T(0,2),T(0,3),T(1,7),T(2,7),T(3,7)];
-  assert.strictEqual(Bot.plan([],hand,true,'easy').flat().length,3);
-  assert.strictEqual(Bot.plan([],hand,true,'normal').flat().length,6);
+  const hand=[1,2,3,4,5,6,7].map(n=>T(0,n)).concat([1,2].flatMap(c=>[2,4,6].map(n=>T(c,n))));
+  assert.strictEqual(Bot.plan([],hand,true,'easy').flat().length,7);
+  assert.strictEqual(Bot.plan([],hand,true,'normal').flat().length,9);
+  assert.strictEqual(Bot.plan([],hand,false,'easy'),null,'한 줄 28점만 찾고 겹치는 그룹을 되짚지 못함');
+  assert.ok(R.checkPlay([],hand,Bot.plan([],hand,false,'normal'),false).ok,'같은 손패로 그룹 세 개 36점 등록 가능');
   assert.deepStrictEqual(Bot.LEVELS,['easy','normal','hard']);
 });
 ok('봇 입력은 읽기 전용: 난이도별 계획이 공개 테이블·자기 손패를 바꾸지 않음', () => {

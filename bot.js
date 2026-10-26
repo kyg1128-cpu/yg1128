@@ -1,6 +1,6 @@
 // 컴퓨터 상대(봇)의 한 턴 계획. 서버(작업 스레드)에서만 씁니다.
 //
-// 쉬움  : 눈앞의 손패 묶음 하나와 기존 묶음에 단순히 붙이기. 여러 묶음을 함께 재배치하지 않음.
+// 쉬움  : 눈앞의 손패 묶음을 순서대로 고르고 단순히 붙이기. 후보를 되짚거나 테이블을 재배치하지 않음.
 // 중간  : 손패 묶음 조합 탐색 → 테이블 끝에 붙이기 → 런 가운데 끼워 쪼개기 → 한 장 빌려 새 묶음.
 // 어려움: 중간 + 테이블 전체를 새로 짜는 탐색(모든 테이블 타일 + 손패로 가장 많이 내려놓는 배치).
 // 입력은 자기 손패와 공개 테이블뿐. 더미·다른 사람 손패·뽑기 확률을 읽거나 바꾸지 않음.
@@ -92,12 +92,11 @@ function bestSets(rack, mode) {
 }
 
 // 쉬움용: 눈에 보이는 후보부터 고르기. 조커도 쓰지만 겹치는 후보를 되짚어 비교하지 않음.
-function greedySets(rack, max = Infinity) {
+function greedySets(rack) {
   const cands = candidates(rack).sort((a, b) => b.kinds.length - a.kinds.length || a.jokers - b.jokers || b.value - a.value);
   const cnt = countKinds(rack);
   const pick = [];
   for (const c of cands) {
-    if (pick.length >= max) break;
     const need = fits(cnt, c);
     if (!need) continue;
     for (const [k, v] of need) cnt.set(k, cnt.get(k) - v);
@@ -358,7 +357,7 @@ function planEasy(table, rack, melded) {
   if (!melded) return planMeld(table, rack, greedySets(rack));
   const T = table.map(s => s.slice());
   const hand = rack.slice();
-  for (const s of greedySets(hand, 1)) {
+  for (const s of greedySets(hand)) {
     T.push(s.ids);
     for (const id of s.ids) hand.splice(hand.indexOf(id), 1);
   }
