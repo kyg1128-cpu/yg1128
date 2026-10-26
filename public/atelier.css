@@ -51,6 +51,11 @@ input:focus-visible,select:focus-visible,.card input:focus-visible,.card select:
 .plist li { background:#f6f4eb; border-color:#e0ddce; border-radius:9px; }
 .plist .tag { background:#e3eadc; color:#36563f; }
 .plist .lv.easy { background:#e8eddf; border-color:#d3dbc8; color:#426141; }
+.plist .lv.normal { background:#e4ebe8; border-color:#cbd9d4; color:#3e6159; }
+.bot-fairness {border-top:1px solid #d7dacb;padding-top:9px;}
+.bot-setup .bot-fairness,.bot-setup .bot-search {font-size:11px;line-height:1.6;}
+.bot-setup .botrow {flex-wrap:wrap;}
+.bot-setup .botrow button {flex:1 1 100px;}
 .plist .lv.hard { background:#eee6dd; border-color:#dfcfbb; color:#79542b; }
 .deck-note { background:#eaece0; color:#616e59; }
 button.qr { border-radius:11px; background:#fff; border-color:#d6d2c1; }

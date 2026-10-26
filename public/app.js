@@ -18,7 +18,8 @@ let chat = [], chatOpen = false, chatSeen = 0, bubbleTimer;   // 채팅 기록 /
 
 // ---------- 말 (i18n.js) — 서버는 코드+값만, 글자는 보는 사람의 말로. 코드가 없으면 서버가 준 한국어 그대로 ----------
 const tx = (k, p) => (window.I18N ? I18N.t(k, p) : k);
-const levelName = l => (l === 'easy' || l === 'hard' ? tx('level.' + l) : '');
+const BOT_LEVEL_ORDER = ['easy', 'normal', 'hard'];
+const levelName = l => (BOT_LEVEL_ORDER.includes(l) ? tx('level.' + l) : '');
 const BOT_KEYS = { '로봇 루미': 'rumi', '로봇 큐브': 'cube', '로봇 타일': 'tile', '로봇 조커': 'joker', '로봇': 'robot', '로봇 평화': 'peace' };   // 옛 서버(botKey 없음)용
 const isSelfName = n => n === '나' || n === 'Me';   // 이름 없이 혼자 연습할 때 쓰는 이름
 function botKeyOf(x) {
@@ -704,7 +705,7 @@ function renderLobby() {
       if (S.hostId === S.me.id) {
         lv.title = tx('lobby.lvTitle');
         lv.disabled = lobbyRequest;
-        lv.onclick = () => editLobby('setBotLevel', { botId: p.id, level: p.level === 'hard' ? 'easy' : 'hard' });
+        lv.onclick = () => editLobby('setBotLevel', { botId: p.id, level: BOT_LEVEL_ORDER[(BOT_LEVEL_ORDER.indexOf(p.level) + 1) % BOT_LEVEL_ORDER.length] });
       } else lv.disabled = true;
       li.append(lv);
     }
@@ -721,7 +722,7 @@ function renderLobby() {
   const slots = Math.max(0, capacity - S.players.length);
   $('#botSummary').textContent = tx('lobby.botCount', { n: S.players.filter(p => p.bot).length });
   $('#botSetupHint').textContent = tx(!host ? 'lobby.botHostOnly' : slots ? 'lobby.botHelp' : 'lobby.botFull', { n: slots });
-  for (const b of ['#btnAddEasy', '#btnAddHard']) {
+  for (const b of ['#btnAddEasy', '#btnAddNormal', '#btnAddHard']) {
     const btn = $(b);
     if (!btn) continue;
     btn.classList.toggle('hidden', !host);
@@ -1257,7 +1258,7 @@ async function share() {
 }
 $('#btnShare').onclick = share;
 $('#btnPracticeInvite').onclick = () => { practiceInviteOpen = !practiceInviteOpen; renderLobby(); };
-for (const [sel, level] of [['#btnAddEasy', 'easy'], ['#btnAddHard', 'hard']]) {
+for (const [sel, level] of [['#btnAddEasy', 'easy'], ['#btnAddNormal', 'normal'], ['#btnAddHard', 'hard']]) {
   const btn = $(sel);
   if (btn) btn.onclick = () => editLobby('addBot', { level });
 }
