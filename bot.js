@@ -1,6 +1,7 @@
 // 컴퓨터 상대(봇)의 한 턴 계획. 서버(작업 스레드)에서만 씁니다.
 //
-// 쉬움  : 눈앞의 손패 묶음을 순서대로 고르고 단순히 붙이기. 후보를 되짚거나 테이블을 재배치하지 않음.
+// 쉬움  : 단순 조합과 붙이기만 탐색. 가끔 묶음·붙이기를 놓치거나 한 장을 더 낼 수 있는 조합을 덜 냄.
+//         찾은 첫 등록·즉시 승리 수는 보호. 실수용 난수는 봇 판단에만 쓰고 분배·뽑기에는 관여하지 않음.
 // 중간  : 손패 묶음 조합 탐색 → 테이블 끝에 붙이기 → 런 가운데 끼워 쪼개기 → 한 장 빌려 새 묶음.
 // 어려움: 중간 + 테이블 전체를 새로 짜는 탐색(모든 테이블 타일 + 손패로 가장 많이 내려놓는 배치).
 // 입력은 자기 손패와 공개 테이블뿐. 더미·다른 사람 손패·뽑기 확률을 읽거나 바꾸지 않음.
@@ -353,20 +354,34 @@ function planMeld(table, rack, sets) {
   return total >= R.INITIAL_MELD ? table.concat(sets.map(s => s.ids)) : null;
 }
 
-function planEasy(table, rack, melded) {
+const EASY_MISTAKES = Object.freeze({ missSet: 0.18, missAppend: 0.28, shorterSet: 0.25 });
+function planEasyBase(table, rack, melded, rng) {
   if (!melded) return planMeld(table, rack, greedySets(rack));
   const T = table.map(s => s.slice());
   const hand = rack.slice();
   for (const s of greedySets(hand)) {
-    T.push(s.ids);
-    for (const id of s.ids) hand.splice(hand.indexOf(id), 1);
+    if (rng && rng() < EASY_MISTAKES.missSet) continue;
+    let ids = s.ids;
+    if (rng && ids.length > 3 && rng() < EASY_MISTAKES.shorterSet) {
+      const shorter = R.analyze(ids.slice(0, -1));
+      if (shorter.ok) ids = shorter.order;
+    }
+    T.push(ids);
+    for (const id of ids) hand.splice(hand.indexOf(id), 1);
   }
   const onlyJokers = hand.every(id => R.tile(id).joker);
   for (const id of hand.slice()) {
     if (R.tile(id).joker && !onlyJokers) continue;
+    if (rng && rng() < EASY_MISTAKES.missAppend) continue;
     if (tryAppend(T, id)) hand.splice(hand.indexOf(id), 1);
   }
   return hand.length < rack.length ? T : null;
+}
+
+function planEasy(table, rack, melded, rng) {
+  const simple = planEasyBase(table, rack, melded);
+  if (!simple || !melded || playedOf(table, simple).length === rack.length) return simple;
+  return planEasyBase(table, rack, melded, rng);
 }
 
 function planNormal(table, rack, melded) {
@@ -405,7 +420,7 @@ function planHard(table, rack, melded, ms) {
 
 // 이번 턴에 낼 테이블을 돌려줌. 낼 게 없으면 null (→ 뽑기)
 function plan(table, rack, melded, level = 'hard', opts = {}) {
-  if (level === 'easy') return planEasy(table, rack, melded);
+  if (level === 'easy') return planEasy(table, rack, melded, typeof opts.rng === 'function' ? opts.rng : Math.random);
   if (level === 'normal') return planNormal(table, rack, melded);
   return planHard(table, rack, melded, opts.ms || SOLVE_MS);
 }
