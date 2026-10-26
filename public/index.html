@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="atelier.css">
 <link rel="stylesheet" href="table-social.css">
 <link rel="stylesheet" href="turn-alerts.css">
+<link rel="stylesheet" href="table-craft.css">
 </head>
 <body>
 <!-- 조커 문양 (그림 문자 대신 SVG: 기기마다 똑같이 보이게). 기본은 십자가 -->
@@ -127,8 +128,15 @@
         <select id="timer">
           <option value="0" data-i18n="timer.0">없음</option><option value="60" data-i18n="timer.60">60초</option><option value="90" data-i18n="timer.90">90초</option>
           <option value="120" data-i18n="timer.120">2분</option><option value="180" data-i18n="timer.180">3분</option>
+          <option value="custom" data-i18n="timer.custom">직접 설정</option>
         </select>
       </label>
+      <form id="customTimerForm" class="custom-timer hidden" autocomplete="off" novalidate>
+        <label for="customTimer" data-i18n="timer.seconds">초 단위로 입력</label>
+        <div><input id="customTimer" type="number" inputmode="numeric" min="5" max="1800" step="1" required aria-describedby="customTimerHint customTimerError"><button id="btnTimerApply" type="submit" data-i18n="timer.apply">적용</button></div>
+        <small id="customTimerHint" data-i18n="timer.hint">5~1800초 · 시간 제한을 없애려면 ‘없음’을 선택하세요.</small>
+        <small id="customTimerError" role="status"></small>
+      </form>
       <button id="btnStart" class="primary big" data-i18n="lobby.start">게임 시작</button>
       <p id="lobbyHint" class="muted"></p>
       <button id="btnClaimHostLobby" type="button" class="ghost hidden" data-i18n="host.claim">방장 맡기</button>
@@ -147,7 +155,7 @@
     <div class="meta"><span class="pool-meta"><span class="stock" aria-hidden="true"><i></i><i></i><i></i></span><span id="poolCount"></span></span><span id="clock"></span><button id="btnChat" class="ghost small" title="채팅" aria-label="채팅" data-i18n-title="game.chat" data-i18n-aria="game.chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 1-8 8H8l-5 3v-7a8 8 0 1 1 17-4Z"/><path d="M7 10h10M7 14h6"/></svg><span id="chatBadge" class="badge hidden"></span></button><button id="btnRules" class="ghost small" title="규칙 한눈에" aria-label="규칙 한눈에" data-i18n-title="game.rules" data-i18n-aria="game.rules">?</button><button id="btnMenu" class="ghost small" title="메뉴" aria-label="메뉴" data-i18n-title="game.menu" data-i18n-aria="game.menu">⋯</button></div>
   </header>
   <div class="connection-note hidden" data-connection role="status"></div>
-  <div class="turn-line"><div id="status" class="status" aria-live="polite" aria-atomic="true"></div><button id="btnLastPlay" class="recent-trigger hidden" type="button" data-i18n="move.recent">지난 수</button></div>
+  <div class="turn-line"><div id="status" class="status" aria-live="polite" aria-atomic="true"></div><button id="btnBoardView" class="board-trigger" type="button" data-i18n="board.open" aria-haspopup="dialog" aria-controls="boardView">판 전체 보기</button><button id="btnLastPlay" class="recent-trigger hidden" type="button" data-i18n="move.recent">지난 수</button></div>
   <div id="coach" class="coach hidden" role="status"></div>
   <main id="table" class="table"></main>
   <div id="log" class="log"></div>
@@ -207,6 +215,7 @@
     <button id="btnShare2" data-i18n="lobby.share">초대 링크 복사</button>
     <button id="btnSound">소리 켜짐</button>
     <label class="volume-control" for="effectVolume"><span><span data-i18n="pref.volume">효과음 크기</span><output id="effectVolumeValue" for="effectVolume">50%</output></span><input id="effectVolume" type="range" min="0" max="100" step="5" value="50"></label>
+    <section class="haptic-settings" aria-labelledby="hapticH"><h4 id="hapticH" data-i18n="haptic.title">손끝 진동</h4><div><button id="btnHaptics" type="button" role="switch" aria-checked="true"></button><button id="btnHapticTest" type="button" data-i18n="haptic.test">진동 테스트</button></div><small id="hapticHint"></small></section>
     <div class="music-settings"><button type="button" id="btnMusic" role="switch" aria-checked="true"><span data-i18n="music.title">테이블 BGM</span><span id="musicState"></span></button><label class="volume-control" for="musicVolume"><span><span data-i18n="music.volume">BGM 크기</span><output id="musicVolumeValue" for="musicVolume">18%</output></span><input id="musicVolume" type="range" min="0" max="60" step="2" value="18"></label><small data-i18n="music.hint">잔잔한 피아노와 마림바 · 이 기기에만 저장돼요</small></div>
     <section class="turn-settings" aria-labelledby="turnSettingsH">
       <h4 id="turnSettingsH" data-i18n="turn.settings">내 차례 알림</h4>
@@ -288,5 +297,6 @@
 <script src="ux.js"></script>
 <script src="push-client.js"></script>
 <script src="turn-alerts.js"></script>
+<script src="table-craft.js"></script>
 </body>
 </html>

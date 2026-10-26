@@ -10,7 +10,7 @@
   const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51];   // C5 D5 E5 G5 A5 C6 D6 E6
   const LOW = { A3: 220, E3: 164.81, D3: 146.83 };                                   // 둔탁한 소리도 같은 음계에서
   const HAPTIC = {
-    pick: 8, place: 12, back: 8, valid: 15, draw: 10, invalid: 18, joker: 15,
+    pick: 7, place: 12, rack: 18, back: 8, valid: [9,45,16], draw: 7, invalid: 18, joker: 15,
     turn: [30, 60, 30], big: [20, 40, 20], firstMeld: [20, 40, 20], win: [40, 60, 40, 60, 80],
     turnAlert: [55, 70, 55, 70, 90],
   };
@@ -28,6 +28,8 @@
   const store = (() => { try { return root.localStorage; } catch (e) { return null; } })();
   let mode = 'on';
   let volume=0.5;
+  let hapticsEnabled=true;
+  try { hapticsEnabled=store?.getItem('rummi-haptics')!=='off'; } catch {}
   try {
     const v = store && store.getItem(KEY);
     if (MODES.includes(v)) mode = v === 'buzz' && !CAN_BUZZ ? 'off' : v;   // 진동이 없으면 '진동만'은 사실상 조용히 → 끔
@@ -54,6 +56,16 @@
         if (ctx.createDynamicsCompressor) {     // 여러 소리가 겹쳐도 찢어지지 않게
           const comp = ctx.createDynamicsCompressor();
           master.connect(comp); out = comp;
+        }
+        // A final soft ceiling catches the first transient before the compressor can react.
+        // The central range stays linear, preserving the quiet ceramic contact.
+        if (ctx.createWaveShaper) {
+          const limiter=ctx.createWaveShaper(),curve=new Float32Array(2049);
+          for(let i=0;i<curve.length;i++){
+            const x=i*2/(curve.length-1)-1,a=Math.abs(x);
+            curve[i]=a<=.7?x:Math.sign(x)*(.7+.25*Math.tanh((a-.7)/.25));
+          }
+          limiter.curve=curve;out.connect(limiter);out=limiter;
         }
         out.connect(ctx.destination);
         destination = out;
@@ -153,6 +165,7 @@
     hiss(out,t,.006,3300+(step%3)*130,1.1,1.35*strength);
     hiss(out,t+.009,.009,2050,1.8,.67*strength);
     thump(out,LOW.A3,t,.048,.58*strength);
+    tone(out,P(0),t+.002,.026,.12*strength,.001);
     tone(out,P(5)*2.76,t+.001,.038,.085*strength,.001);
     hiss(out,t+.025,.014,900,.8,.15*strength);
   }
@@ -198,7 +211,7 @@
   };
 
   function buzz(pattern) {
-    if (mode === 'off' || !nav || typeof nav.vibrate !== 'function') return false;
+    if (mode === 'off' || !hapticsEnabled || root.document?.hidden || !nav || typeof nav.vibrate !== 'function') return false;
     const p = typeof pattern === 'string' ? HAPTIC[pattern] : pattern;
     if (p == null) return false;
     // 아직 한 번도 화면을 누르지 않았으면 브라우저가 막고 경고를 띄우므로 건너뜀
@@ -233,6 +246,7 @@
   function setMode(m) {
     if (!MODES.includes(m)) return mode;
     mode = m;
+    if(m==='off' && CAN_BUZZ)try{nav.vibrate(0);}catch{}
     if(master && ctx)master.gain.setTargetAtTime(m==='on'?volume:0,ctx.currentTime,0.015);
     try { if (store) store.setItem(KEY, m); } catch (e) {}
     if (m === 'on') { audio(); play('next', { buzz: false }); }
@@ -242,7 +256,7 @@
   }
   const cycle = () => {   // 진동이 없는 기기에선 '진동만'을 건너뜀
     let next = MODES[(MODES.indexOf(mode) + 1) % MODES.length];
-    if (next === 'buzz' && !CAN_BUZZ) next = 'off';
+    if (next === 'buzz' && (!CAN_BUZZ || !hapticsEnabled)) next = 'off';
     return setMode(next);
   };
 
@@ -254,8 +268,18 @@
     return volume;
   }
 
+  function setHaptics(enabled) {
+    hapticsEnabled=enabled===true;
+    try { store?.setItem('rummi-haptics',hapticsEnabled?'on':'off'); } catch {}
+    if(!hapticsEnabled && CAN_BUZZ)try{nav.vibrate(0);}catch{}
+    // A saved vibration-only mode should not become a silent dead end when vibration is disabled.
+    if(!hapticsEnabled && mode==='buzz')setMode('off');
+    try { if(root.dispatchEvent && root.Event)root.dispatchEvent(new root.Event('rummi-audio')); } catch {}
+    return hapticsEnabled;
+  }
+
   return {
-    play, buzz, setMode, cycle, setVolume,
+    play, buzz, setMode, cycle, setVolume, setHaptics,
     musicBus(fromGesture=false) {
       const c=audio(fromGesture);if(!c || !destination)return null;
       const gain=c.createGain();gain.gain.value=0;gain.connect(destination);return {context:c,gain};
@@ -263,14 +287,16 @@
     get volume() { return volume; },
     get mode() { return mode; },
     get canBuzz() { return CAN_BUZZ; },
+    get hapticsEnabled() { return hapticsEnabled; },
     label: m => {   // 화면 말(i18n.js)이 있으면 그 말로, 없으면 한국어. 진동이 없는 기기는 '소리 켜짐/꺼짐'
       const k = MODES.includes(m) ? m : mode;
-      const key = CAN_BUZZ ? 'sfx.' + k : k === 'on' ? 'sfx.plainOn' : 'sfx.plainOff';
+      const useBuzz=CAN_BUZZ && hapticsEnabled;
+      const key = useBuzz ? 'sfx.' + k : k === 'on' ? 'sfx.plainOn' : 'sfx.plainOff';
       try {
         const I = root.I18N;
         if (I && typeof I.t === 'function') { const s = I.t(key); if (typeof s === 'string' && s !== key) return s; }
       } catch (e) {}
-      return CAN_BUZZ ? LABEL[k] : PLAIN[k === 'on' ? 'on' : 'off'];
+      return useBuzz ? LABEL[k] : PLAIN[k === 'on' ? 'on' : 'off'];
     },
     PENTA, LOW, HAPTIC, SOUNDS: Object.keys(SOUNDS),
   };

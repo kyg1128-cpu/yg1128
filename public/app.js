@@ -176,6 +176,7 @@ function connect() {
   };
 }
 function leaveLocal({ keepSeat = false } = {}) {
+  window.BoardView?.close(false);
   const leaving = session;
   if (window.TurnAlerts) TurnAlerts.clear();
   if (window.TableSocial) TableSocial.clear();
@@ -728,8 +729,9 @@ function renderLobby() {
     btn.classList.toggle('hidden', !host);
     btn.disabled = !slots || lobbyRequest;
   }
-  $('#timer').value = String(S.settings.timer);
+  $('#timer').value = [0,60,90,120,180].includes(S.settings.timer) ? String(S.settings.timer) : 'custom';
   $('#timer').disabled = !host || lobbyRequest;
+  window.TableCraft?.syncTimer();
   $('#btnStart').classList.toggle('hidden', !host);
   $('#btnStart').disabled = S.players.length < 2 || lobbyRequest;
   $('#btnStart').setAttribute('aria-busy', String(lobbyRequest));
@@ -995,6 +997,7 @@ function renderGame() {
     const sound=meldNow?'firstMeld':'valid',step=info?[...info.changed].filter(i=>R.analyze(W.table[i]).ok).length:0;
     if(window.TableFeel)TableFeel.complete(justfit,{settled,sound,step});else sfx(sound,{step});
   }
+  window.BoardView?.sync();
   if (window.UX) UX.sync();
 }
 
@@ -1263,8 +1266,11 @@ for (const [sel, level] of [['#btnAddEasy', 'easy'], ['#btnAddNormal', 'normal']
   if (btn) btn.onclick = () => editLobby('addBot', { level });
 }
 $('#btnShare2').onclick = share;
-$('#timer').onchange = e => editLobby('settings', { timer: Number(e.target.value) });
-const doStart = () => S && S.state === 'lobby' ? editLobby('start') : api('start').catch(err => toast(err.message));
+$('#timer').onchange = e => window.TableCraft?.chooseTimer(e.target.value);
+const doStart = () => {
+  if (window.TableCraft && !TableCraft.beforeStart()) return;
+  return S && S.state === 'lobby' ? editLobby('start') : api('start').catch(err => toast(err.message));
+};
 $('#btnStart').onclick = doStart;
 $('#btnAgain').onclick = doStart;
 const doLeave = async () => {

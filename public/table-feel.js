@@ -77,9 +77,9 @@
       if(r.top<rr.top || r.bottom>rr.bottom || !visible(r)) {
         // Large hands: reveal the tile in the rack without a flight across clipped content.
         tile.scrollIntoView({block:'nearest',inline:'nearest',behavior:'auto'});
-        if(window.Sfx)Sfx.play('rack',{buzz:false,quiet:true});return;
+        if(window.Sfx)Sfx.play('rack',{quiet:true});return;
       }
-      if(calm() || !tile.animate || active.size>=LIMIT) { if(window.Sfx)Sfx.play('rack',{buzz:false,quiet:true});return; }
+      if(calm() || !tile.animate || active.size>=LIMIT) { if(window.Sfx)Sfx.play('rack',{quiet:true});return; }
       const from=source.getBoundingClientRect();if(!visible(from))return;
       const ghost=tile.cloneNode(true);ghost.removeAttribute('data-id');ghost.removeAttribute('id');ghost.removeAttribute('role');ghost.removeAttribute('tabindex');ghost.draggable=false;
       ghost.className='tile motion-ghost draw-ghost '+[...tile.classList].filter(c=>/^c[0-3]$|^joker$/.test(c)).join(' ');ghost.setAttribute('aria-hidden','true');
@@ -89,7 +89,7 @@
       const a=ghost.animate([{transform:`translate(${dx}px,${dy}px) rotate(-9deg) scale(.62)`,opacity:.35},{transform:`translate(${dx*.35}px,${dy*.35-16}px) rotate(3deg) scale(1.04)`,opacity:1,offset:.58},{transform:'translate(0,-2px) rotate(-.5deg) scale(1.01)',offset:.9},{transform:'none'}],{duration,delay,easing:'cubic-bezier(.25,.72,.3,1)',fill:'both'});
       let done=false,timer;
       const stop=(landed=false)=>{if(done)return;done=true;clearTimeout(timer);a.cancel();ghost.remove();tile.style.visibility=prior;active.delete(stop);
-        if(landed && tile.isConnected){land(tile);if(window.Sfx)Sfx.play('rack',{buzz:false,quiet:true});}
+        if(landed && tile.isConnected && !document.hidden){land(tile);if(window.Sfx)Sfx.play('rack',{quiet:true});}
       };
       active.add(stop);a.onfinish=()=>stop(true);a.oncancel=()=>stop();timer=setTimeout(()=>stop(true),duration+delay+100);
     });

@@ -309,7 +309,7 @@
     'chat.inputAria': '메시지',
     'chat.send': '보내기',
     'chat.empty': '아직 대화가 없어요. 먼저 인사해 보세요 🙂',
-    'chat.quick': ['아멘 🙏', '👍 좋아요', '와! 👏', '할렐루야 🙌', '잠깐만요 ⏳', '축하해요 🎉', 'ㅋㅋㅋ'],
+    'chat.quick': ['스겜', 'GG', '아멘 🙏', '👍 좋아요', '와! 👏', '할렐루야 🙌', '잠깐만요 ⏳', '축하해요 🎉', 'ㅋㅋㅋ'],
     // 봇이 하는 말 (서버 BOT_LINES와 같은 순서)
     'botline.hello': ['안녕하세요! 잘 부탁드려요 🙂', '반가워요! 즐겁게 해요 😊', '샬롬! 오늘도 은혜로운 한 판 🙏'],
     'botline.nice': ['와, 대단해요! 👏', '멋진 수예요!', '오~ 잘하시네요 👍', '할렐루야 🙌'],
@@ -672,7 +672,7 @@
     'chat.inputAria': 'Message',
     'chat.send': 'Send',
     'chat.empty': 'No messages yet — say hello 🙂',
-    'chat.quick': ['Amen 🙏', '👍 Nice', 'Wow! 👏', 'Hallelujah 🙌', 'One sec ⏳', 'Congrats 🎉', 'Haha 😄'],
+    'chat.quick': ['Quick game?', 'GG', 'Amen 🙏', '👍 Nice', 'Wow! 👏', 'Hallelujah 🙌', 'One sec ⏳', 'Congrats 🎉', 'Haha 😄'],
     'botline.hello': ['Hi! Ready for a game? 🙂', 'Good to see you! Let’s play 😊', 'Shalom! Glad you’re here 🙏'],
     'botline.nice': ['Wow, amazing! 👏', 'What a move!', 'Ooh, you’re good at this 👍', 'Hallelujah 🙌'],
     'botline.congrats': ['Congratulations! 🎉', 'Well played! 👏', 'Rematch? I’ll get you next time 💪'],
@@ -749,6 +749,40 @@
     'coach.close': 'Click to close',   // 마우스를 올렸을 때만 보이는 풍선 도움말
   };
 
+  Object.assign(KO, {
+    'timer.custom':'직접 설정', 'timer.seconds':'초 단위로 입력', 'timer.apply':'적용',
+    'timer.hint':'5~1800초 · 시간 제한을 없애려면 ‘없음’을 선택하세요.',
+    'timer.saved':'차례당 {seconds}초로 설정했어요.', 'timer.beforeStart':'입력한 시간을 먼저 적용해 주세요.',
+    'err.badTimer':'시간은 5~1800초 사이의 정수로 입력해 주세요.',
+    'board.open':'판 전체 보기', 'board.close':'돌아가기', 'board.kicker':'테이블 살펴보기',
+    'board.readOnly':'보기 전용 · 차례는 계속 진행돼요', 'board.pan':'게임판 · 스크롤로 이동',
+    'board.fit':'한눈에 보기', 'board.readable':'크게 보기', 'board.out':'판 축소', 'board.in':'판 확대',
+    'board.hint':'확대 후 손가락으로 밀어 살펴보세요. 타일은 돌아간 뒤 놓을 수 있어요.',
+    'board.empty':'아직 테이블에 놓인 타일이 없어요.', 'board.count':'{sets}묶음 · {tiles}장',
+    'board.set':'테이블 조합', 'board.unfinished':'만드는 중인 조합',
+    'board.myTurn':'내 차례', 'board.theirTurn':'{name}님의 차례', 'board.time':'{seconds}초 남음',
+    'haptic.title':'손끝 진동', 'haptic.on':'진동 켜짐', 'haptic.off':'진동 꺼짐', 'haptic.test':'진동 테스트',
+    'haptic.hint':'타일을 집고, 내려놓고, 조합을 완성할 때 짧게 울려요. 이 기기에 저장됩니다.',
+    'haptic.muted':'전체 소리가 꺼져 있어 진동도 쉬고 있어요. 소리를 켜거나 ‘진동만’을 선택하세요.',
+    'haptic.unsupported':'이 브라우저는 진동을 지원하지 않아요. iPhone에서는 소리와 움직임으로 손맛을 전해요.'
+  });
+  Object.assign(EN, {
+    'timer.custom':'Custom', 'timer.seconds':'Seconds per turn', 'timer.apply':'Apply',
+    'timer.hint':'5–1800 seconds. Choose Off for unlimited time.',
+    'timer.saved':'Each turn now lasts {seconds} seconds.', 'timer.beforeStart':'Apply your timer before starting.',
+    'err.badTimer':'Enter a whole number between 5 and 1800 seconds.',
+    'board.open':'View table', 'board.close':'Back to game', 'board.kicker':'A CLOSER LOOK',
+    'board.readOnly':'View only · play continues', 'board.pan':'Game table · scroll to explore',
+    'board.fit':'Fit table', 'board.readable':'Full size', 'board.out':'Zoom out', 'board.in':'Zoom in',
+    'board.hint':'Zoom in, then swipe or scroll to explore. Go back to place your tiles.',
+    'board.empty':'No tiles on the table yet.', 'board.count':'{sets} sets · {tiles} tiles',
+    'board.set':'Table set', 'board.unfinished':'Set in progress',
+    'board.myTurn':'Your turn', 'board.theirTurn':"{name}’s turn", 'board.time':'{seconds}s left',
+    'haptic.title':'Tile haptics', 'haptic.on':'Vibration on', 'haptic.off':'Vibration off', 'haptic.test':'Test vibration',
+    'haptic.hint':'Short pulses for picking up, landing and completing sets. Saved on this device.',
+    'haptic.muted':'All sound is off, so vibration is muted too. Enable sound or choose vibration only.',
+    'haptic.unsupported':'This browser does not support vibration. On iPhone, sound and motion provide the feedback.'
+  });
   const DICT = { ko: KO, en: EN };
   const valid = l => l === 'ko' || l === 'en';
   function detect() {
