@@ -45,9 +45,12 @@
   panel.id='boardView';panel.className='board-view overlay hidden';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-labelledby','boardViewH');
   panel.innerHTML=`<div class="board-frame"><header class="board-head"><div><small data-i18n="board.kicker"></small><h2 id="boardViewH" data-i18n="board.open"></h2></div><button id="btnBoardClose" type="button" data-i18n="board.close"></button></header><div class="board-summary"><span id="boardViewCount" role="status"></span><span data-i18n="board.readOnly"></span></div><div id="boardPan" class="board-pan" tabindex="0" data-i18n-aria="board.pan"><div id="boardSpace" class="board-space"><div id="boardCanvas" class="board-canvas"></div></div><p id="boardEmpty" class="board-empty" data-i18n="board.empty"></p></div><footer class="board-tools"><button id="btnBoardFit" type="button" data-i18n="board.fit"></button><button id="btnBoardReadable" type="button" data-i18n="board.readable"></button><div class="board-zoom"><button id="btnBoardOut" type="button" data-i18n-aria="board.out">−</button><output id="boardZoom" aria-live="polite">100%</output><button id="btnBoardIn" type="button" data-i18n-aria="board.in">+</button></div><small data-i18n="board.hint"></small></footer></div>`;
   document.body.append(panel);I18N.apply(panel);
+  const handPanel=document.createElement('section');handPanel.className='board-hand';handPanel.setAttribute('aria-labelledby','boardHandH');
+  handPanel.innerHTML='<header><h3 id="boardHandH" data-i18n="board.hand"></h3><span id="boardHandCount"></span></header><div id="boardHand" class="board-hand-row" tabindex="0" data-i18n-aria="board.handScroll"></div><p id="boardHandEmpty" class="hidden" data-i18n="board.handEmpty"></p>';
+  panel.querySelector('.board-tools').before(handPanel);I18N.apply(handPanel);
   const live=document.createElement('span');live.className='board-live';panel.querySelector('.board-summary').append(live);
-  const canvas=q('#boardCanvas'),pan=q('#boardPan'),space=q('#boardSpace');
-  let openRoom='', zoom=1, fitMode=true, boardKey='', returnFocus=null, resizeFrame=0, clockTimer=0;
+  const canvas=q('#boardCanvas'),pan=q('#boardPan'),space=q('#boardSpace'),handRow=q('#boardHand');
+  let openRoom='', zoom=1, fitMode=true, boardKey='', handKey='', returnFocus=null, resizeFrame=0, clockTimer=0;
   const isOpen=()=>!panel.classList.contains('hidden');
   function updateClock() {
     if(!S || !isOpen())return;
@@ -74,7 +77,7 @@
   }
   function close(restore=true) {
     if (!isOpen()) return;
-    clearInterval(clockTimer);clockTimer=0;panel.classList.add('hidden');document.body.classList.remove('board-inspecting');openRoom='';boardKey='';canvas.replaceChildren();
+    clearInterval(clockTimer);clockTimer=0;panel.classList.add('hidden');document.body.classList.remove('board-inspecting');openRoom='';boardKey='';handKey='';canvas.replaceChildren();handRow.replaceChildren();q('#boardHandCount').textContent='';
     for(const node of document.querySelectorAll('[data-board-inert]')){node.inert=false;node.removeAttribute('data-board-inert');}
     if (restore && returnFocus?.isConnected && !q('#game').classList.contains('hidden'))returnFocus.focus({preventScroll:true});
   }
@@ -84,6 +87,18 @@
     updateClock();
     const mine=S.turnId===S.me.id;
     const table=mine && W ? W.table : (S.preview || S.table);
+    // Match the playable rack's sort order and omit tiles placed in the current draft.
+    // Only the viewer's own authenticated rack is read.
+    const placed=mine && W?new Set(W.table.flat()):new Set(),own=new Set(S.me.rack);
+    const hand=rackOrder.filter(id=>own.has(id) && !placed.has(id));
+    const selection=mine && W?[...W.sel]:[];
+    const nextHandKey=JSON.stringify([hand,selection,I18N.lang,document.body.classList.contains('marks'),jokerStyle]);
+    if(nextHandKey!==handKey){
+      handKey=nextHandKey;const scroll=handRow.scrollTop,selected=new Set(selection),fragment=document.createDocumentFragment();
+      for(const id of hand){const tile=tileEl(id);tile.removeAttribute('data-id');tile.setAttribute('role','img');tile.setAttribute('aria-label',tileLabel(id));tile.classList.toggle('sel',selected.has(id));fragment.append(tile);}
+      handRow.replaceChildren(fragment);handRow.scrollTop=scroll;
+      q('#boardHandCount').textContent=tr('board.handCount',{tiles:hand.length});q('#boardHandEmpty').classList.toggle('hidden',hand.length>0);handRow.classList.toggle('hidden',!hand.length);
+    }
     // Include raw order and language/preferences, but never any opponent's rack.
     const key=JSON.stringify([table,I18N.lang,document.body.classList.contains('marks'),jokerStyle]);
     if (key===boardKey)return;
@@ -105,7 +120,7 @@
   }
   function open() {
     if (!S || S.state!=='playing')return;
-    returnFocus=document.activeElement;openRoom=S.code;boardKey='';fitMode=true;
+    returnFocus=document.activeElement;openRoom=S.code;boardKey='';handKey='';fitMode=true;
     panel.classList.remove('hidden');document.body.classList.add('board-inspecting');
     // Keep the background out of the keyboard/assistive-technology focus order.
     for(const node of document.body.children)if(node!==panel && !node.inert && node.tagName!=='SCRIPT' && node.tagName!=='SVG'){node.inert=true;node.dataset.boardInert='';}
@@ -142,6 +157,6 @@
   q('#btnHaptics').onclick=()=>{Sfx.setHaptics(!Sfx.hapticsEnabled);syncHaptics();};
   q('#btnHapticTest').onclick=()=>Sfx.buzz([12,65,22]);
   window.addEventListener('rummi-audio',syncHaptics);
-  I18N.on(()=>{I18N.apply(panel);boardKey='';sync();syncHaptics();syncTimer();});
+  I18N.on(()=>{I18N.apply(panel);boardKey='';handKey='';sync();syncHaptics();syncTimer();});
   syncHaptics();if(typeof S!=='undefined' && S)syncTimer();
 })();
