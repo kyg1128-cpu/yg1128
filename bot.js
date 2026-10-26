@@ -1,8 +1,9 @@
 // 컴퓨터 상대(봇)의 한 턴 계획. 서버(작업 스레드)에서만 씁니다.
 //
-// 쉬움  : 손패 묶음을 한 턴에 하나만, 조커는 안 씀, 테이블 끝에 붙이기는 가끔만.
-// 기본  : 손패 묶음을 최대한 → 테이블 끝에 붙이기 → 런 가운데 끼워 쪼개기 → 테이블에서 한 장 빌려 새 묶음.
-// 어려움: 기본 + 테이블 전체를 새로 짜는 탐색(모든 테이블 타일 + 손패로 가장 많이 내려놓는 배치).
+// 쉬움  : 눈앞의 손패 묶음 하나와 기존 묶음에 단순히 붙이기. 여러 묶음을 함께 재배치하지 않음.
+// 중간  : 손패 묶음 조합 탐색 → 테이블 끝에 붙이기 → 런 가운데 끼워 쪼개기 → 한 장 빌려 새 묶음.
+// 어려움: 중간 + 테이블 전체를 새로 짜는 탐색(모든 테이블 타일 + 손패로 가장 많이 내려놓는 배치).
+// 입력은 자기 손패와 공개 테이블뿐. 더미·다른 사람 손패·뽑기 확률을 읽거나 바꾸지 않음.
 //         조커는 다른 타일을 내려놓는 데 필요할 때만 쓰고, 높은 숫자부터 털어냄.
 const R = require('./public/rules.js');
 
@@ -90,9 +91,9 @@ function bestSets(rack, mode) {
   return toIds(rack, best.pick);
 }
 
-// 쉬움용: 앞에서부터 욕심껏 고르기 (조커 안 씀)
+// 쉬움용: 눈에 보이는 후보부터 고르기. 조커도 쓰지만 겹치는 후보를 되짚어 비교하지 않음.
 function greedySets(rack, max = Infinity) {
-  const cands = candidates(rack, false).sort((a, b) => b.kinds.length - a.kinds.length || b.value - a.value);
+  const cands = candidates(rack).sort((a, b) => b.kinds.length - a.kinds.length || a.jokers - b.jokers || b.value - a.value);
   const cnt = countKinds(rack);
   const pick = [];
   for (const c of cands) {
@@ -353,7 +354,7 @@ function planMeld(table, rack, sets) {
   return total >= R.INITIAL_MELD ? table.concat(sets.map(s => s.ids)) : null;
 }
 
-function planEasy(table, rack, melded, rng) {
+function planEasy(table, rack, melded) {
   if (!melded) return planMeld(table, rack, greedySets(rack));
   const T = table.map(s => s.slice());
   const hand = rack.slice();
@@ -361,12 +362,10 @@ function planEasy(table, rack, melded, rng) {
     T.push(s.ids);
     for (const id of s.ids) hand.splice(hand.indexOf(id), 1);
   }
-  if (rng() < 0.6) {
-    const onlyJokers = hand.every(id => R.tile(id).joker);
-    for (const id of hand.slice()) {
-      if (R.tile(id).joker && !onlyJokers) continue;
-      if (tryAppend(T, id)) hand.splice(hand.indexOf(id), 1);
-    }
+  const onlyJokers = hand.every(id => R.tile(id).joker);
+  for (const id of hand.slice()) {
+    if (R.tile(id).joker && !onlyJokers) continue;
+    if (tryAppend(T, id)) hand.splice(hand.indexOf(id), 1);
   }
   return hand.length < rack.length ? T : null;
 }
@@ -407,10 +406,9 @@ function planHard(table, rack, melded, ms) {
 
 // 이번 턴에 낼 테이블을 돌려줌. 낼 게 없으면 null (→ 뽑기)
 function plan(table, rack, melded, level = 'hard', opts = {}) {
-  const rng = opts.rng || Math.random;
-  if (level === 'easy') return planEasy(table, rack, melded, rng);
+  if (level === 'easy') return planEasy(table, rack, melded);
   if (level === 'normal') return planNormal(table, rack, melded);
   return planHard(table, rack, melded, opts.ms || SOLVE_MS);
 }
 
-module.exports = { plan, bestSets, candidates, solveTable, LEVELS: ['easy', 'hard'] };
+module.exports = { plan, bestSets, candidates, solveTable, LEVELS: ['easy', 'normal', 'hard'] };

@@ -1,6 +1,11 @@
 // 규칙 + 서버 통합 테스트:  node test.js
 const assert = require('assert');
 const R = require('./public/rules.js');
+const randomPool = count => {
+  const pool=Array.from({length:count},(_,i)=>i);
+  for(let i=pool.length-1;i>0;i--){const j=require('node:crypto').randomInt(i+1);[pool[i],pool[j]]=[pool[j],pool[i]];}
+  return pool;
+};
 
 // 타일 id 만들기: color 0~3, num 1~13, copy 0/1
 const T = (color, num, copy = 0) => color * 26 + (num - 1) * 2 + copy;
@@ -398,16 +403,31 @@ ok('어려움: 같은 숫자 그룹 3개로 나누기 (13 두 벌 + 조커로 �
   const p2 = Bot.plan(t2, [T(1, 10, 1)], true, 'hard');
   assert.ok(p2 && R.checkPlay(t2, [T(1, 10, 1)], p2, true).ok);
 });
-ok('쉬움: 조커 안 씀·묶음은 한 턴에 하나', () => {
-  const hand = [T(0, 1), T(0, 2), T(0, 3), T(1, 7), T(2, 7), T(3, 7), J1];
-  const t = Bot.plan([], hand, true, 'easy', { rng: () => 0.99 });
+ok('쉬움: 단순 묶음 하나·무작위 실수 없이 단순 붙이기', () => {
+  const hand = [T(0, 1), T(0, 2), T(0, 3), T(1, 7), T(2, 7), T(3, 7)];
+  const t = Bot.plan([], hand, true, 'easy', { rng: () => { throw Error('계산에 난수 사용 금지'); } });
   assert.strictEqual(t.length, 1);
-  assert.ok(!t.flat().includes(J1));
   assert.ok(R.checkPlay([], hand, t, true).ok);
+  const run = [[T(0, 1), T(0, 2), T(0, 3)]];
+  const added=Bot.plan(run,[T(0,4)],true,'easy',{rng:()=>{throw Error('임의로 붙이기 건너뛰기 금지');}});
+  assert.ok(added && R.checkPlay(run,[T(0,4)],added,true).ok);
+});
+ok('쉬움도 조커로 단순 첫 등록 가능·중간은 여러 묶음 탐색', () => {
+  const initial=[T(0,10),T(0,11),J1];
+  assert.ok(R.checkPlay([],initial,Bot.plan([],initial,false,'easy'),false).ok);
+  const hand=[T(0,1),T(0,2),T(0,3),T(1,7),T(2,7),T(3,7)];
+  assert.strictEqual(Bot.plan([],hand,true,'easy').flat().length,3);
+  assert.strictEqual(Bot.plan([],hand,true,'normal').flat().length,6);
+  assert.deepStrictEqual(Bot.LEVELS,['easy','normal','hard']);
+});
+ok('봇 입력은 읽기 전용: 난이도별 계획이 공개 테이블·자기 손패를 바꾸지 않음', () => {
+  const table=Object.freeze([Object.freeze([T(0,3),T(0,4),T(0,5),T(0,6),T(0,7)])]);
+  const hand=Object.freeze([T(0,5,1),T(1,9),T(2,9),T(3,9)]);
+  for(const level of Bot.LEVELS){const plan=Bot.plan(table,hand,true,level);if(plan)assert.ok(R.checkPlay(table,hand,plan,true).ok);}
 });
 // levels: 각 판의 참가자 난이도. 이긴 자리 번호를 돌려줌
 function selfPlay(levels) {
-  const pool = Array.from({ length: R.deckSize(levels.length) }, (_, i) => i).sort(() => Math.random() - 0.5);
+  const pool = randomPool(R.deckSize(levels.length));
   const ps = levels.map(level => ({ level, rack: pool.splice(0, 14), melded: false }));
   let table = [], turn = 0, passes = 0;
   for (let step = 0; step < 3000; step++) {
@@ -462,7 +482,7 @@ ok('어려움이 쉬움보다 확실히 강함 (1:1 30판)', () => {
 ok('기본 전략끼리 300판: 모든 수가 규칙 통과, 모든 판이 끝남', () => {
   let finished = 0, emptied = 0;
   for (let g = 0; g < 300; g++) {
-    const pool = Array.from({ length: 106 }, (_, i) => i).sort(() => Math.random() - 0.5);
+    const pool = randomPool(106);
     const ps = Array.from({ length: 2 + (g % 3) }, () => ({ rack: pool.splice(0, 14), melded: false }));
     let table = [], turn = 0, passes = 0;
     for (let step = 0; step < 2000; step++) {
@@ -904,7 +924,7 @@ async function integration() {
   }
   const h = await post('create', { name: '혼자' });
   failed(await post('start', { room: h.room, token: h.token }), 'needTwo', {}, '2명 이상이어야 시작할 수 있어요');
-  for (const level of ['easy', 'hard', 'hard']) assert.strictEqual((await post('addBot', { room: h.room, token: h.token, level })).status, 200);
+  for (const level of ['easy', 'normal', 'hard']) assert.strictEqual((await post('addBot', { room: h.room, token: h.token, level })).status, 200);
   await listen(h);
   await until(() => h.state && h.state.players.length === 4 && h.state.players.filter(p => p.bot).length === 3);
   await until(() => (h.chat || []).filter(m => m.bot).length === 3);
@@ -921,12 +941,12 @@ async function integration() {
     assert.deepStrictEqual(h.state.players.map(p => p.name), ['혼자', '로봇 루미', '로봇 큐브', '로봇 타일'], '한국어 이름은 그대로');
     const bj = h.state.log.filter(e => e.k === 'botJoin');
     assert.deepStrictEqual(bj.map(e => [e.p.who, e.p.level]), [
-      [{ name: '로봇 루미', botKey: 'rumi' }, 'easy'], [{ name: '로봇 큐브', botKey: 'cube' }, 'hard'], [{ name: '로봇 타일', botKey: 'tile' }, 'hard'],
+      [{ name: '로봇 루미', botKey: 'rumi' }, 'easy'], [{ name: '로봇 큐브', botKey: 'cube' }, 'normal'], [{ name: '로봇 타일', botKey: 'tile' }, 'hard'],
     ]);
-    assert.deepStrictEqual(bj.map(e => e.t), ['로봇 루미 참가 (쉬움)', '로봇 큐브 참가 (어려움)', '로봇 타일 참가 (어려움)']);
+    assert.deepStrictEqual(bj.map(e => e.t), ['로봇 루미 참가 (쉬움)', '로봇 큐브 참가 (중간)', '로봇 타일 참가 (어려움)']);
     ok('봇 botKey·인사 줄 key/i·봇 참가 기록(botJoin)', () => {});
   }
-  assert.deepStrictEqual(h.state.players.slice(1).map(p => p.level), ['easy', 'hard', 'hard']);
+  assert.deepStrictEqual(h.state.players.slice(1).map(p => p.level), ['easy', 'normal', 'hard']);
   const bot3 = h.state.players[3].id, bot1 = h.state.players[1].id;
   await post('removeBot', { room: h.room, token: h.token, botId: bot3 });
   await until(() => h.state.players.length === 3);

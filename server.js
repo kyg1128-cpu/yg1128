@@ -1,4 +1,4 @@
-// 루미큐브 온라인 서버 — 외부 패키지 없이 Node만으로 동작합니다.
+// 루미큐브 온라인 서버 — Node 서버, web-push는 선택 가능한 알림 전송에 사용합니다.
 // 실행: node server.js   (포트 바꾸기: PORT=8080 node server.js)
 //
 // 여러 언어: 서버는 code + params를 보내고 각 화면이 자기 언어로 그립니다. 한국어 문장은 대비용으로 그대로 같이 보냄.
@@ -13,7 +13,7 @@
 //   'win'     { who }              who 승리
 //   'leave'   { who }              게임 중에 who가 나감
 //   'join'    { who }              대기실에 who 입장
-//   'botJoin' { who, level }       봇 참가. level = 'easy' | 'hard'
+//   'botJoin' { who, level }       봇 참가. level = 'easy' | 'normal' | 'hard'
 //   'botTakeover' { who, why }     대타 봇이 같은 자리를 이어받음. why = 'left' | 'offline'
 //   'playerReturn' { who }        일시 끊김 후 재접속한 사람이 자리를 돌려받음
 //
@@ -79,7 +79,7 @@ function newPlayer(room, name) {
     clients: new Set(), connected: false, disconnectedAt: Date.now(),
   };
 }
-const BOT_LEVELS = { easy: '쉬움', hard: '어려움' };
+const BOT_LEVELS = { easy: '쉬움', normal: '중간', hard: '어려움' };
 const isLevel = l => typeof l === 'string' && Object.hasOwn(BOT_LEVELS, l);   // 'toString'·배열 같은 값 막기
 function newBot(room, level) {
   const b = BOT_NAMES.find(x => !room.players.some(p => p.name === x.name)) || BOT_FALLBACK;
@@ -150,6 +150,7 @@ const current = room => room.players[room.turn];
 
 // ---------- 게임 진행 ----------
 function startGame(room) {
+  // 난이도·사람/봇·승패·등록 가능 여부를 참조하지 않는 공통 Fisher–Yates 셔플.
   room.deckSize = R.deckSize(room.players.length);
   const pool = Array.from({ length: room.deckSize }, (_, i) => i);
   for (let i = pool.length - 1; i > 0; i--) {
@@ -272,6 +273,7 @@ function nextTurn(room) {
 function doDraw(room, p, why = null) {
   const whyKo = why ? ` (${DRAW_WHY[why]})` : '';
   if (room.pool.length) {
+    // 이미 섞인 동일한 더미의 마지막 한 장. 누구인지/난이도에 따라 다시 고르지 않음.
     p.rack.push(room.pool.pop());
     const st = statsOf(p);
     st.draws++;
