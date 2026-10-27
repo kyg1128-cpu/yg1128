@@ -162,18 +162,20 @@
   // Dry ceramic contact: sharp edge, a tiny secondary contact and a short wooden body.
   // The high-frequency transient stays audible on phone speakers without a long metallic ring.
   function clack(out,t,step=0,strength=1) {
-    hiss(out,t,.006,3300+(step%3)*130,1.1,1.35*strength);
-    hiss(out,t+.009,.009,2050,1.8,.67*strength);
-    thump(out,LOW.A3,t,.048,.58*strength);
-    tone(out,P(0),t+.002,.026,.12*strength,.001);
-    tone(out,P(5)*2.76,t+.001,.038,.085*strength,.001);
-    hiss(out,t+.025,.014,900,.8,.15*strength);
+    const weight=[1,.94,1.04][Math.abs(Math.round(step))%3]*strength;
+    hiss(out,t,.005,3500+(step%3)*110,.8,1.5*weight);
+    hiss(out,t+.012,.009,2150,1.6,.72*weight);
+    thump(out,LOW.A3,t,.062,.65*weight);
+    tone(out,P(0),t+.002,.033,.17*weight,.001);
+    tone(out,P(0)*2.76,t+.001,.052,.12*weight,.001);
+    hiss(out,t+.032,.012,4100,1.2,.27*weight);
+    hiss(out,t+.043,.021,750,.7,.13*weight);
   }
 
   // 소리 사전 — 각 함수는 길이(초)를 돌려줌
   const SOUNDS = {
     pick(o, t) { hiss(o, t, 0.015, 2150, 1.2, 0.36); thump(o, LOW.A3, t, 0.045, 0.18); tone(o, P(0), t, 0.065, 0.025, 0.002); return 0.09; },
-    place(o, t) { hiss(o, t, 0.045, 1200, 0.8, 0.12, 2200); return 0.07; },
+    place(o, t) { hiss(o,t,.027,1600,.7,.12,1000);thump(o,LOW.E3,t,.035,.08);return .07; },
     // 착지 시의 짧은 타일 접촉음. 이동 시작음·화음보다 작고 건조하게.
     settle(o, t, s) { clack(o,t,s);return .11; },
     rack(o,t) { clack(o,t,0,.72);thump(o,LOW.E3,t+.004,.075,.32);return .12; },

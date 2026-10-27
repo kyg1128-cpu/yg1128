@@ -23,15 +23,16 @@
   }
   function land(tile,{impact=false}={}) {
     if(calm() || !tile.isConnected)return;
-    animate(tile,[{transform:'scale(1.045,.96)'},{transform:'translateY(-1px) scale(.995,1.01)',offset:.6},{transform:'none'}],{duration:145,easing:'ease-out'});
+    animate(tile,[{transform:'translateY(1.5px) scale(.985,1.02)'},{transform:'translateY(-1.8px) scale(1.01,.99)',offset:.4},{transform:'none'}],{duration:210,easing:'cubic-bezier(.2,.7,.3,1)'});
     if(!impact)return;
     const r=tile.getBoundingClientRect();if(!visible(r))return;
     const ring=layer('feel-impact',{left:r.left-8,top:r.bottom-9,width:r.width+16,height:16});
     animate(ring,[{opacity:.65,transform:'scale(.55)'},{opacity:0,transform:'scale(1.35)'}],{duration:260,easing:'ease-out'},true);
   }
   function shine(set,{confirmed=false,big=false,joker=false}={}) {
+    if(document.body.classList.contains('board-inspecting') && set?.dataset.set!==undefined)set=document.querySelector(`#boardCanvas [data-board-set="${set.dataset.set}"]`)||set;
     if(calm() || !set.isConnected)return;
-    const raw=set.getBoundingClientRect(),table=document.querySelector('#table').getBoundingClientRect();
+    const raw=set.getBoundingClientRect(),table=document.querySelector(set.closest('#boardCanvas')?'#boardPan':'#table').getBoundingClientRect();
     const r={left:Math.max(raw.left,table.left,0),top:Math.max(raw.top,table.top,0),right:Math.min(raw.right,table.right,innerWidth),bottom:Math.min(raw.bottom,table.bottom,innerHeight)};
     r.width=r.right-r.left;r.height=r.bottom-r.top;if(!visible(r))return;
     const suffix=(confirmed?' confirmed':'')+(big?' big':'')+(joker?' joker':'');
@@ -69,10 +70,11 @@
   }
   // Only the owner receives these IDs. A draw never exposes another player's tile.
   function draw(ids) {
-    const rack=document.querySelector('#rack'),source=document.querySelector('.stock');
+    const inspecting=document.body.classList.contains('board-inspecting');
+    const rack=document.querySelector(inspecting?'#boardHand':'#rack'),source=document.querySelector(inspecting?'#boardView .board-stock':'.stock');
     if(!rack || !source || document.hidden)return;
     ids.slice(0,3).forEach((id,i)=>{
-      const tile=rack.querySelector(`.tile[data-id="${id}"]`);if(!tile)return;
+      const tile=rack.querySelector(`.tile[${inspecting?'data-board-id':'data-id'}="${id}"]`);if(!tile)return;
       const r=tile.getBoundingClientRect(),rr=rack.getBoundingClientRect();
       if(r.top<rr.top || r.bottom>rr.bottom || !visible(r)) {
         // Large hands: reveal the tile in the rack without a flight across clipped content.
@@ -81,7 +83,7 @@
       }
       if(calm() || !tile.animate || active.size>=LIMIT) { if(window.Sfx)Sfx.play('rack',{quiet:true});return; }
       const from=source.getBoundingClientRect();if(!visible(from))return;
-      const ghost=tile.cloneNode(true);ghost.removeAttribute('data-id');ghost.removeAttribute('id');ghost.removeAttribute('role');ghost.removeAttribute('tabindex');ghost.draggable=false;
+      const ghost=tile.cloneNode(true);ghost.removeAttribute('data-id');ghost.removeAttribute('data-board-id');ghost.removeAttribute('id');ghost.removeAttribute('role');ghost.removeAttribute('tabindex');ghost.draggable=false;
       ghost.className='tile motion-ghost draw-ghost '+[...tile.classList].filter(c=>/^c[0-3]$|^joker$/.test(c)).join(' ');ghost.setAttribute('aria-hidden','true');
       Object.assign(ghost.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',fontSize:getComputedStyle(tile).fontSize});document.body.append(ghost);
       const prior=tile.style.visibility;tile.style.visibility='hidden';

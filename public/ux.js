@@ -6,6 +6,7 @@
   const sending=()=>typeof turnRequest!=='undefined' && turnRequest;
   const canSend=()=>link==='ready' && navigator.onLine!==false;
   function sync() {
+    window.BoardView?.controls?.();
     document.querySelectorAll('[data-connection]').forEach(e=>{
       const key=navigator.onLine===false && session ? 'offline' : link;
       e.classList.toggle('hidden',key==='ready'||key==='idle');

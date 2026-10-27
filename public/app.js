@@ -412,6 +412,12 @@ const meName = () => (S.players.find(p => p.id === S.me.id) || {}).name;
 function onState(s) {
   skew = s.now - Date.now();
   const prevS = S;
+  if(prevS && s.state==='playing'){
+    const {now:a,botAction:b,...oldView}=prevS,{now:c,botAction:d,...newView}=s;
+    if(JSON.stringify(oldView)===JSON.stringify(newView)){
+      S=s;tick();window.BotStage?.sync();window.BoardView?.controls?.();if(window.UX)UX.sync();if(window.TurnAlerts)TurnAlerts.sync(S);return;
+    }
+  }
   // The server echoes draft previews to their author, too. An unchanged view must
   // not rebuild the board halfway through a local tile flight or replay rewards.
   if(prevS && s.state==='playing' && s.turnId===s.me.id && prevS.turnId===s.turnId) {
@@ -992,12 +998,13 @@ function renderGame() {
   $('#table').scrollLeft = tableScroll.left;
   $('#rack').scrollTop = rackScroll;
   $('#table').querySelectorAll('.set').forEach(d => { const x = setScroll.get(tileKey(d)); if (x) d.scrollLeft = x; });
+  window.BoardView?.sync();
   const settled=motionBefore ? TileMotion.after(motionBefore) : null;
   if(justfit.length || meldNow) {
     const sound=meldNow?'firstMeld':'valid',step=info?[...info.changed].filter(i=>R.analyze(W.table[i]).ok).length:0;
     if(window.TableFeel)TableFeel.complete(justfit,{settled,sound,step});else sfx(sound,{step});
   }
-  window.BoardView?.sync();
+  window.BotStage?.sync();
   if (window.UX) UX.sync();
 }
 
@@ -1077,6 +1084,7 @@ function renderOverlay() {
 function moveSelected(target) {
   if (turnRequest || !W || !W.sel.size) return;
   const ids = [...W.sel];
+  window.TileMotion?.mark(ids);
   const myRack = new Set(S.me.rack);
   const before = W.table.map(s => s.slice()), beforeKey = R.setKeyTable(W.table);   // 한 수 취소용
   if (target === 'rack') {
@@ -1273,8 +1281,13 @@ const doStart = () => {
 };
 $('#btnStart').onclick = doStart;
 $('#btnAgain').onclick = doStart;
+let leaveConfirm=false;
+function resetLeaveConfirmation(){leaveConfirm=false;$('#btnLeave3').textContent=tx('menu.leaveGame');$('#btnLeave3').classList.remove('armed');}
 const doLeave = async () => {
-  if (S && S.state === 'playing' && !confirm(tx('confirm.leave'))) return;
+  if (S && S.state === 'playing' && !leaveConfirm) {
+    openMenu();leaveConfirm=true;$('#btnLeave3').textContent=tx('menu.confirmLeave');$('#btnLeave3').classList.add('armed');$('#btnLeave3').focus();return;
+  }
+  leaveConfirm=false;
   if (es) { es.close(); es = null; }   // 스트림이 끊기며 '방을 찾을 수 없어요'가 뜨지 않게 먼저 닫음
   let keepSeat = S?.state === 'playing';
   try { const r = await api('leave');keepSeat = !!r.canReturn; } catch (err) {
@@ -1288,6 +1301,7 @@ const doLeave = async () => {
 $('#btnLeave').onclick = doLeave; $('#btnLeave2').onclick = doLeave; $('#btnLeave3').onclick = doLeave;
 // ⋯ 메뉴: 열면 초점을 메뉴 안으로, 닫으면 ⋯ 단추로 (키보드로 쓸 때 뒤의 게임 버튼을 헤매지 않게)
 function openMenu() {
+  resetLeaveConfirmation();
   $('#recoveryCode').type='password';$('#btnRevealRecovery').textContent=tx('recovery.show');
   accessLabels();
   $('#menu').classList.remove('hidden');
@@ -1295,6 +1309,7 @@ function openMenu() {
   try { $('#btnRules2').focus({ preventScroll: true }); } catch {}
 }
 function closeMenu(focusBack = true) {
+  resetLeaveConfirmation();
   if ($('#menu').classList.contains('hidden')) return;
   $('#menu').classList.add('hidden');
   if (focusBack && lastScreen === 'game') { try { $('#btnMenu').focus({ preventScroll: true }); } catch {} }
@@ -1424,7 +1439,7 @@ document.addEventListener('keydown', e => {
   undoStep();
 });
 let turnRequest = false;
-$('#btnDraw').onclick = async () => {
+async function drawTile() {
   if (turnRequest || !isMyTurn() || (window.UX && !UX.canSend())) return;
   if (W && R.setKeyTable(W.table) !== R.setKeyTable(S.table) && !confirm(tx('confirm.draw'))) return;
   const submittedRound=S.round,submittedSeq=S.turnSeq;
@@ -1441,8 +1456,9 @@ $('#btnDraw').onclick = async () => {
       } else render();
     }
   }
-};
-$('#btnDone').onclick = async () => {
+}
+$('#btnDraw').onclick=drawTile;
+async function commitTurn() {
   if (turnRequest || !W || !isMyTurn() || (window.UX && !UX.canSend())) return;
   const block = blockInfo(turnInfo());
   if (block) {   // 서버에 보내지 않고: 고칠 묶음만 와인색으로 살짝 흔들고, 이유를 알려 줌
@@ -1450,7 +1466,7 @@ $('#btnDone').onclick = async () => {
     sfx('invalid');
     toast(block.msg);
     render();
-    const first = block.sets.length && document.querySelector(`#table .set[data-set="${block.sets[0]}"]`);
+    const first = block.sets.length && document.querySelector(window.BoardView?.isOpen?.()?`#boardCanvas [data-board-set="${block.sets[0]}"]`:`#table .set[data-set="${block.sets[0]}"]`);
     if (first) first.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: isCalm() ? 'auto' : 'smooth' });
     else {
       const st = $('#status');
@@ -1464,7 +1480,8 @@ $('#btnDone').onclick = async () => {
   turnRequest = true; if (window.UX) UX.sync();
   try { await api('play', { table: submitted }); } catch (err) { toast(err.message); }
   finally { turnRequest = false; if (S) render(); }
-};
+}
+$('#btnDone').onclick=commitTurn;
 
 // 남은 시간 + 연결 끊긴 사람 자동 진행까지 남은 초
 function tick() {
@@ -1481,6 +1498,7 @@ setInterval(tick, 500);
 // ---------- 말 바꾸기 (한국어 | English): 다시 불러오지 않고 그 자리에서 다시 그림 ----------
 // 고정 글자·aria·placeholder는 i18n.js가 [data-i18n…]로 이미 바꿈 → 여기선 코드로 만든 글자만
 if (window.I18N) I18N.on(() => {
+  resetLeaveConfirmation();
   cancelRevealForLayout();
   clearTimeout(bubbleTimer); $('#chatBubble').classList.add('hidden');
   buildQuick();

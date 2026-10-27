@@ -145,7 +145,7 @@
   if(window.ResizeObserver)new ResizeObserver(resize).observe(pan);else window.addEventListener('resize',resize);
   // Ended/lobby broadcasts do not call renderGame; close the inspector then too.
   new MutationObserver(()=>{if(isOpen() && (!S || S.state!=='playing' || q('#game').classList.contains('hidden')))close(false);}).observe(q('#game'),{attributes:true,attributeFilter:['class']});
-  window.BoardView={open,close,sync};
+  window.BoardView={open,close,sync,isOpen,layout};
 
   function syncHaptics() {
     const supported=Sfx.canBuzz,enabled=Sfx.hapticsEnabled;
