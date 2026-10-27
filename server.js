@@ -160,7 +160,7 @@ function startGame(room) {
   for (const p of room.players) { p.rack = pool.splice(0, 14); p.melded = false; p.stats = newStats(); }
   Object.assign(room, {
     state: 'playing', pool, table: [], turn: crypto.randomInt(room.players.length),
-    passes: 0, result: null, preview: null, lastPlay: null, log: [], awards: null, turnNo: 0,
+    passes: 0, result: null, preview: null, botAction:null, lastPlay: null, log: [], awards: null, turnNo: 0,
   });
   room.round = (room.round || 0) + 1;
   log(room, 'start', { round: room.round, who: whoOf(current(room)) }, `${room.round}번째 게임 시작! ${current(room).name}님부터`);
@@ -173,6 +173,7 @@ function beginTurn(room) {
   room.turnSeq = (room.turnSeq || 0) + 1;
   room.turnNo = (room.turnNo || 0) + 1;
   room.preview = null;
+  room.botAction = null;
   room.turnStartedAt = Date.now();
   room.deadline = room.settings.timer ? Date.now() + room.settings.timer * 1000 : 0;
   clearTimeout(room.botTimer);
@@ -191,13 +192,32 @@ async function botAct(room, seq) {
     if (!alive()) return;
     const check = table && R.checkPlay(room.table, p.rack, table, p.melded);
     if (!check || !check.ok) { doDraw(room, p); return broadcast(room); }
-    room.preview = check.normalized;
-    broadcast(room);
-    room.botTimer = setTimeout(() => {
-      if (!alive()) return;
-      applyPlay(room, p, check);
+    const dance=require('./bot-choreography'),plan=dance.sequence(room.table,check.normalized);
+    const final=R.checkPlay(room.table,p.rack,plan.table,p.melded);
+    if(!final.ok){doDraw(room,p);return broadcast(room);}
+    const budget=Math.max(0,Math.min(14000,room.deadline?room.deadline-Date.now()-250:14000));
+    const pace=dance.timing(p.level,plan.steps.length,BOT.show,budget);
+    const later=(ms,fn)=>{room.botTimer=setTimeout(()=>{if(alive())fn();},ms);};
+    const commit=()=>{
+      if(!alive())return;
+      if(room.deadline && Date.now()>=room.deadline)doDraw(room,p,'timeout');
+      else applyPlay(room,p,final);
       broadcast(room);
-    }, BOT.show);
+    };
+    if(budget<100 || !plan.steps.length)return commit();
+    let index=0;
+    const next=()=>{
+      if(!alive())return;
+      if(room.deadline && room.deadline-Date.now()<pace.pick+pace.place+150)return commit();
+      if(index===plan.steps.length){room.botAction={phase:'complete',step:index,total:index,tile:null};broadcast(room);return later(pace.hold,commit);}
+      const step=plan.steps[index];
+      room.botAction={phase:'pick',step:index+1,total:plan.steps.length,tile:step.wasPublic?step.id:null};broadcast(room);
+      later(pace.pick*(.92+(index%3)*.06),()=>{
+        room.preview=step.table;room.botAction={phase:'place',step:index+1,total:plan.steps.length,tile:step.id};broadcast(room);
+        index++;later(pace.place*[1,.94,1.06][index%3],next);
+      });
+    };
+    next();
   }, Math.max(0, until - Date.now()));
 }
 // ---------- 채팅 ----------
@@ -312,6 +332,7 @@ function endGame(room, winner) {
   room.deadline = 0;
   clearTimeout(room.botTimer);
   room.preview = null;
+  room.botAction = null;
   log(room, 'win', { who: whoOf(winner) }, `🏆 ${winner.name}님 승리!`);
   if (winner.bot) botSay(room, winner, 'win', { force: true });
   else botSay(room, anyBot(room), 'congrats', { force: true });
@@ -380,6 +401,7 @@ function cancelSeatBot(room, p) {
   room.botEpoch = (room.botEpoch || 0) + 1;
   clearTimeout(room.botTimer);
   room.preview = null;
+  room.botAction = null;
 }
 function keepReservedRoom(room) {
   if (humans(room).length) { delete room.emptySince; return; }
@@ -474,7 +496,7 @@ function view(room, me) {
     })),
     table: room.table, turnId: room.state === 'playing' ? current(room).id : null,
     turnSeq: room.turnSeq || 0, deadline: room.deadline || 0,
-    pool: room.pool ? room.pool.length : 0, preview: room.preview, lastPlay: room.lastPlay || null, log: room.log.slice(-8),
+    pool: room.pool ? room.pool.length : 0, preview: room.preview, botAction:room.state==='playing' && current(room).bot ? room.botAction || null : null, lastPlay: room.lastPlay || null, log: room.log.slice(-8),
     result: room.result, round: room.round || 0,
     awards: room.state === 'ended' ? room.awards || null : null, history: room.history || [],
   };

@@ -363,6 +363,13 @@ ok('tableDiff: 새 묶음·사라진 옛 묶음·새로 놓인 타일', () => {
 }
 
 console.log('봇');
+ok('봇 연출: 공개 타일 보존·한 장씩 공개·최종 조합·난이도별 속도',()=>{
+  const D=require('./bot-choreography'),before=[[T(1,3),T(1,4),T(1,5)],[T(1,6),T(1,7),T(1,8)]],after=[[T(1,3),T(1,4),T(1,5),T(1,6),T(1,7),T(1,8),T(1,9)]];
+  const plan=D.sequence(before,after),old=new Set(before.flat());let count=old.size;
+  for(const s of plan.steps){const ids=s.table.flat();assert.strictEqual(new Set(ids).size,ids.length);for(const id of old)assert.ok(ids.includes(id));assert.ok(ids.length<=count+1);count=ids.length;}
+  assert.ok(R.checkPlay(before,[T(1,9)],plan.table,true).ok);
+  const easy=D.timing('easy',4),hard=D.timing('hard',4);assert.ok(easy.pick+easy.place>hard.pick+hard.place);
+});
 const Bot = require('./bot.js');
 ok('첫 등록: 30점 넘으면 내고, 모자라면 뽑기', () => {
   const t = Bot.plan([], [T(0, 11), T(1, 11), T(2, 11), T(3, 2)], false);
